@@ -6,10 +6,12 @@ comportamento em cenário de teste.
 """
 from __future__ import annotations
 
+import argparse
 import asyncio
 import math
 import os
 import random
+import sqlite3
 import string
 import time
 from collections import deque
@@ -32,6 +34,27 @@ def log_message(sector: str, rack_id: str, message: str, emoji: str) -> None:
     print(f"[{sector}/{rack_id}] {message} {emoji}")
 
 
+# Coordenadas fixas de locais em Fortaleza-CE, Brasil
+# Cada rack será associado a uma coordenada fixa (racks não se movem)
+FORTALEZA_COORDINATES: list[Tuple[float, float]] = [
+    (-3.7319, -38.5267),   # Centro
+    (-3.7403, -38.4993),   # Aldeota
+    (-3.7648, -38.4712),   # Iguatemi Shopping
+    (-3.7271, -38.4909),   # Mucuripe
+    (-3.7191, -38.5089),   # Praia de Iracema
+    (-3.7456, -38.5302),   # Fátima
+    (-3.7589, -38.4834),   # Papicu
+    (-3.7744, -38.5566),   # Benfica
+    (-3.7505, -38.5124),   # Dionísio Torres
+    (-3.7380, -38.5189),   # Meireles
+    (-3.7612, -38.4563),   # Cocó
+    (-3.7283, -38.5434),   # Jacarecanga
+    (-3.7834, -38.5912),   # Messejana
+    (-3.7422, -38.4621),   # Edson Queiroz
+    (-3.7956, -38.5234),   # Maraponga
+]
+
+
 @dataclass
 class RackState:
     """Representa o estado corrente de um rack monitorado."""
@@ -40,6 +63,8 @@ class RackState:
     status: int = field(default_factory=lambda: random.choice([0, 1]))
     temperature: float = field(default_factory=lambda: round(random.uniform(22.0, 30.0), 2))
     humidity: float = field(default_factory=lambda: round(random.uniform(40.0, 60.0), 2))
+    latitude: float = 0.0
+    longitude: float = 0.0
     publishes: int = 0
     anomalies: int = 0
     next_door_open_at: float = 0.0
@@ -292,11 +317,14 @@ class RackSimulator:
         return self._next_humidity()
 
     def _next_status(self) -> Tuple[str, bool]:
-        anomaly_triggered = self._random.random() < self._anomaly_probability
-        if anomaly_triggered:
-            value = self._random.choice([-1, 2, 3])
-            self._state.anomalies += 1
-            return str(value), True
+        """Retorna o estado atual da porta.
+        
+        A porta só pode estar fechada (0) ou aberta (1).
+        Não há valores de anomalia para este atributo.
+        
+        Returns:
+            Tuple com o valor formatado ('0' ou '1') e False (sem anomalia).
+        """
         return str(self._state.status), False
 
     def _next_temperature(self) -> Tuple[str, bool]:
@@ -401,9 +429,39 @@ class RackSimulator:
         return f"{self._publisher._base_topic}/{self._state.rack_id}/{self._topic_segment(attribute)}"
 
     def _topic_segment(self, attribute: str) -> str:
+        """Retorna o segmento do tópico MQTT para o atributo especificado.
+        
+        Args:
+            attribute: Nome do atributo (status, temperature, humidity, location)
+            
+        Returns:
+            Segmento do tópico MQTT
+        """
         if attribute == "status":
             return "status"
+        if attribute == "location":
+            return "location"
         return f"environment/{attribute}"
+    
+    def publish_location(self) -> None:
+        """Publica as coordenadas do rack (latitude, longitude) no broker MQTT.
+        
+        As coordenadas são fixas por rack, representando a localização física
+        do equipamento em Fortaleza-CE, Brasil.
+        """
+        import json
+        location_data = json.dumps({
+            "latitude": self._state.latitude,
+            "longitude": self._state.longitude
+        })
+        topic = self._compose_topic("location")
+        self._publisher.publish(topic, location_data)
+        log_message(
+            "simulator",
+            self._state.rack_id,
+            f"Localização publicada: lat={self._state.latitude:.6f}, lon={self._state.longitude:.6f}",
+            "📍",
+        )
 
 
 def load_mqtt_client() -> mqtt.Client:
@@ -432,23 +490,86 @@ def load_mqtt_client() -> mqtt.Client:
     return client
 
 
-def generate_rack_ids(amount: int = 10) -> list[str]:
-    """Gera identificadores únicos para os racks simulados."""
-    identifiers: set[str] = set()
-    alphabet = string.ascii_uppercase + string.digits
-    while len(identifiers) < amount:
-        suffix = "".join(random.choices(alphabet, k=4))
-        identifiers.add(suffix)
-    return sorted(identifiers)
+def generate_rack_ids(amount: int = 10, reset: bool = False) -> list[str]:
+    """Gera identificadores únicos para os racks simulados com persistência.
+
+    Os identificadores são armazenados em uma base SQLite local, garantindo que
+    execuções subsequentes reutilizem os mesmos racks. Quando ``reset`` é
+    verdadeiro, a base é esvaziada e um novo conjunto de racks é criado.
+    """
+
+    db_path = os.path.join(os.path.dirname(__file__), "racks.db")
+    conn = sqlite3.connect(db_path)
+
+    try:
+        with conn:
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS racks (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    rack_code TEXT NOT NULL UNIQUE
+                )
+                """
+            )
+
+            if reset:
+                conn.execute("DELETE FROM racks")
+
+            cursor = conn.execute("SELECT rack_code FROM racks ORDER BY id")
+            existing_codes = [row[0] for row in cursor.fetchall()]
+
+            identifiers: set[str] = set(existing_codes)
+            alphabet = string.ascii_uppercase + string.digits
+            while len(identifiers) < amount:
+                suffix = "".join(random.choices(alphabet, k=4))
+                identifiers.add(suffix)
+
+            new_codes = [code for code in identifiers if code not in existing_codes]
+            if new_codes:
+                conn.executemany(
+                    "INSERT OR IGNORE INTO racks (rack_code) VALUES (?)",
+                    [(code,) for code in new_codes],
+                )
+
+        return sorted(identifiers)
+    finally:
+        conn.close()
 
 
-async def run_simulation() -> None:
-    """Inicializa recursos e executa a simulação de telemetria."""
+async def run_simulation(reset: bool = False) -> None:
+    """Inicializa recursos e executa a simulação de telemetria.
+
+    Args:
+        reset: Quando verdadeiro, recria o conjunto de racks persistidos.
+    """
     client = load_mqtt_client()
     base_topic = os.getenv("MQTT_BASE_TOPIC", "racks/").rstrip("/")
     publisher = TelemetryPublisher(client, base_topic)
-    rack_states = [RackState(rack_id=rack_id) for rack_id in generate_rack_ids()]
+    rack_ids = generate_rack_ids(amount=10, reset=reset)
+    
+    # Atribui coordenadas fixas de Fortaleza-CE para cada rack
+    rack_states = []
+    for idx, rack_id in enumerate(rack_ids):
+        coord_idx = idx % len(FORTALEZA_COORDINATES)
+        lat, lon = FORTALEZA_COORDINATES[coord_idx]
+        state = RackState(
+            rack_id=rack_id,
+            latitude=lat,
+            longitude=lon,
+        )
+        rack_states.append(state)
+        log_message(
+            "simulator",
+            rack_id,
+            f"Coordenadas atribuídas: lat={lat:.6f}, lon={lon:.6f}",
+            "📍",
+        )
+    
     simulators = [RackSimulator(state, publisher) for state in rack_states]
+    
+    # Publica localização inicial de cada rack
+    for sim in simulators:
+        sim.publish_location()
     simulator_map: Dict[str, RackSimulator] = {state.rack_id: sim for state, sim in zip(rack_states, simulators)}
 
     loop = asyncio.get_running_loop()
@@ -518,8 +639,17 @@ def setup_command_subscriptions(
 
 def main() -> None:
     """Ponto de entrada para execução direta do módulo."""
+
+    parser = argparse.ArgumentParser(description="MQTT rack telemetry simulator")
+    parser.add_argument(
+        "--reset",
+        action="store_true",
+        help="Recria o conjunto de racks persistidos na base SQLite.",
+    )
+    args = parser.parse_args()
+
     try:
-        asyncio.run(run_simulation())
+        asyncio.run(run_simulation(reset=args.reset))
     except KeyboardInterrupt:
         log_message("simulator", "global", "Simulação interrompida pelo usuário", "🛑")
 

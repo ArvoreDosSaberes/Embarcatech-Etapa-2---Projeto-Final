@@ -58,4 +58,4 @@ cd "${SCRIPT_DIR}"
 source "${PROJECT_ROOT}/venv/bin/activate"
 
 echo -e "${INFO} Virtual environment activated. Running mqtt_simulator.py...${NC}"
-python mqtt_simulator.py
+python mqtt_simulator.py "$@"

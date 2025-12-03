@@ -869,19 +869,124 @@ class MainWindow(QMainWindow):
         """)
         layout.addWidget(title)
         
-        # Map view
+        # Map view usando Leaflet.js + OpenStreetMap (opensource)
         self.map_view = QWebEngineView()
-        initial_map = """
-        <html>
-        <body style="margin:0; display:flex; align-items:center; justify-content:center; height:100vh; background-color:#ecf0f1;">
-            <h3 style="color:#7f8c8d;">📍 Aguardando dados de localização...</h3>
-        </body>
-        </html>
-        """
+        self.map_view.setMinimumHeight(300)
+        initial_map = self.generate_leaflet_map_html()
         self.map_view.setHtml(initial_map)
         layout.addWidget(self.map_view)
         
         return section
+    
+    def generate_leaflet_map_html(self, latitude: float = None, longitude: float = None, rack_id: str = None) -> str:
+        """
+        Gera o HTML para exibir o mapa usando Leaflet.js + OpenStreetMap.
+        
+        OpenStreetMap é um mapa opensource gratuito com licença ODbL.
+        Leaflet.js é uma biblioteca JavaScript opensource (BSD-2-Clause).
+        
+        Args:
+            latitude: Latitude do rack (default: centro de Fortaleza-CE)
+            longitude: Longitude do rack (default: centro de Fortaleza-CE)
+            rack_id: ID do rack para exibir no popup
+            
+        Returns:
+            HTML completo com mapa Leaflet/OpenStreetMap
+        """
+        # Centro de Fortaleza-CE como padrão
+        default_lat = -3.7319
+        default_lon = -38.5267
+        
+        lat = latitude if latitude is not None else default_lat
+        lon = longitude if longitude is not None else default_lon
+        
+        # Determina zoom e mensagem do popup
+        if latitude is not None and longitude is not None and rack_id:
+            zoom = 15
+            popup_content = f"<b>🖥️ Rack {rack_id}</b><br>📍 Lat: {lat:.6f}<br>📍 Lon: {lon:.6f}"
+            marker_visible = "true"
+        else:
+            zoom = 12
+            popup_content = "Aguardando dados de localização..."
+            marker_visible = "false"
+        
+        html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Mapa do Rack</title>
+            <!-- Leaflet.js - Biblioteca opensource (BSD-2-Clause License) -->
+            <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+                  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
+                  crossorigin=""/>
+            <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+                    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
+                    crossorigin=""></script>
+            <style>
+                html, body {{
+                    margin: 0;
+                    padding: 0;
+                    height: 100%;
+                    width: 100%;
+                }}
+                #map {{
+                    height: 100%;
+                    width: 100%;
+                    border-radius: 10px;
+                }}
+                .leaflet-control-attribution {{
+                    font-size: 10px;
+                }}
+            </style>
+        </head>
+        <body>
+            <div id="map"></div>
+            <script>
+                // Inicializa o mapa centrado em Fortaleza-CE, Brasil
+                var map = L.map('map').setView([{lat}, {lon}], {zoom});
+                
+                // Tiles do OpenStreetMap (ODbL License - Open Data Commons)
+                // Uso gratuito com atribuição obrigatória
+                L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
+                    maxZoom: 19,
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                }}).addTo(map);
+                
+                // Adiciona marcador se temos localização válida
+                if ({marker_visible}) {{
+                    var marker = L.marker([{lat}, {lon}]).addTo(map);
+                    marker.bindPopup("{popup_content}").openPopup();
+                    
+                    // Ícone personalizado para o rack
+                    var rackIcon = L.divIcon({{
+                        className: 'rack-marker',
+                        html: '<div style="background-color: #3498db; color: white; padding: 5px 10px; border-radius: 5px; font-weight: bold; font-size: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.3);">🖥️ Rack</div>',
+                        iconSize: [80, 30],
+                        iconAnchor: [40, 30],
+                        popupAnchor: [0, -30]
+                    }});
+                    marker.setIcon(rackIcon);
+                }}
+            </script>
+        </body>
+        </html>
+        """
+        return html
+    
+    def update_map_view(self, rack_id: str, latitude: float, longitude: float):
+        """
+        Atualiza o mapa com a localização do rack selecionado.
+        
+        Args:
+            rack_id: ID do rack
+            latitude: Latitude do rack
+            longitude: Longitude do rack
+        """
+        if hasattr(self, 'map_view') and self.map_view is not None:
+            map_html = self.generate_leaflet_map_html(latitude, longitude, rack_id)
+            self.map_view.setHtml(map_html)
     
     def create_status_bar(self):
         """Create status bar for AI actions display"""
@@ -1010,6 +1115,8 @@ class MainWindow(QMainWindow):
                 'door_status': None,
                 'ventilation_status': None,
                 'buzzer_status': None,
+                'latitude': None,
+                'longitude': None,
                 'temperature_history': [],
                 'humidity_history': [],
                 'temperature_forecast': [],
@@ -1023,6 +1130,8 @@ class MainWindow(QMainWindow):
             state.setdefault('temperature_forecast', [])
             state.setdefault('humidity_forecast', [])
             state.setdefault('last_sample_timestamp', None)
+            state.setdefault('latitude', None)
+            state.setdefault('longitude', None)
         return self.rack_states[rack_id]
 
     def getOrCreateRack(self, rackId: str) -> Rack:
@@ -1175,6 +1284,7 @@ class MainWindow(QMainWindow):
             f"{base}/+/status",
             f"{base}/+/environment/temperature",
             f"{base}/+/environment/humidity",
+            f"{base}/+/location",
             f"{base}/+/command/door",
             f"{base}/+/command/ventilation",
             f"{base}/+/command/buzzer",
@@ -1237,8 +1347,10 @@ class MainWindow(QMainWindow):
 
             # Update state based on topic
             if topic.endswith('/status'):
-                state['door_status'] = int(payload)
-                print(f"[MQTT/Status] 🚪 Rack {rack_id} door: {'Open' if int(payload) == 1 else 'Closed'}")
+                # Porta só pode estar aberta (1) ou fechada (0)
+                raw_value = int(payload)
+                state['door_status'] = 1 if raw_value == 1 else 0
+                print(f"[MQTT/Status] 🚪 Rack {rack_id} door: {'Open' if state['door_status'] == 1 else 'Closed'}")
 
             elif topic.endswith('/environment/temperature'):
                 temp_value = float(payload)
@@ -1257,17 +1369,34 @@ class MainWindow(QMainWindow):
                 print(f"[MQTT/Environment] 💧 Rack {rack_id} humidity: {hum_value}%")
 
             elif topic.endswith('/command/door'):
-                state['door_status'] = int(payload)
-                print(f"[MQTT/Command] 🚪 Rack {rack_id} door command: {'OPEN' if int(payload) == 1 else 'CLOSE'}")
+                # Porta só pode estar aberta (1) ou fechada (0)
+                raw_value = int(payload)
+                state['door_status'] = 1 if raw_value == 1 else 0
+                print(f"[MQTT/Command] 🚪 Rack {rack_id} door command: {'OPEN' if state['door_status'] == 1 else 'CLOSE'}")
 
             elif topic.endswith('/command/ventilation'):
-                state['ventilation_status'] = int(payload)
-                print(f"[MQTT/Command] 💨 Rack {rack_id} ventilation: {'ON' if int(payload) == 1 else 'OFF'}")
+                # Ventilação só pode estar ligada (1) ou desligada (0)
+                raw_value = int(payload)
+                state['ventilation_status'] = 1 if raw_value == 1 else 0
+                print(f"[MQTT/Command] 💨 Rack {rack_id} ventilation: {'ON' if state['ventilation_status'] == 1 else 'OFF'}")
 
             elif topic.endswith('/command/buzzer'):
-                state['buzzer_status'] = int(payload)
+                # Buzzer só aceita valores 0-3 (OFF, DOOR_OPEN, BREAK_IN, OVERHEAT)
+                raw_value = int(payload)
+                state['buzzer_status'] = raw_value if 0 <= raw_value <= 3 else 0
                 buzzer_states = {0: 'Desligado', 1: 'Porta Aberta', 2: 'Arrombamento', 3: 'Superaquecimento'}
-                print(f"[MQTT/Command] 🔔 Rack {rack_id} buzzer: {buzzer_states.get(int(payload), 'Unknown')}")
+                print(f"[MQTT/Command] 🔔 Rack {rack_id} buzzer: {buzzer_states.get(state['buzzer_status'], 'Unknown')}")
+
+            elif topic.endswith('/location'):
+                # Processa coordenadas de localização do rack
+                try:
+                    import json
+                    location_data = json.loads(payload)
+                    state['latitude'] = float(location_data.get('latitude', 0))
+                    state['longitude'] = float(location_data.get('longitude', 0))
+                    print(f"[MQTT/Location] 📍 Rack {rack_id} location: lat={state['latitude']:.6f}, lon={state['longitude']:.6f}")
+                except (json.JSONDecodeError, ValueError, TypeError) as e:
+                    print(f"[MQTT/Error] ❌ Invalid location data for rack {rack_id}: {e}")
 
             # Sync Rack object with updated state
             self.syncRackFromState(rack, state)
@@ -1407,6 +1536,12 @@ class MainWindow(QMainWindow):
                     """
                 )
 
+            # Update map with rack location
+            lat = state.get('latitude')
+            lon = state.get('longitude')
+            if lat is not None and lon is not None:
+                self.update_map_view(rack_id, lat, lon)
+
         except Exception as e:
             print(f"[UI/Error] ❌ Error updating UI: {e}")
 
@@ -1431,8 +1566,8 @@ class MainWindow(QMainWindow):
                     state.get('door_status'),
                     state.get('ventilation_status'),
                     state.get('buzzer_status'),
-                    None,  # latitude - to be implemented
-                    None   # longitude - to be implemented
+                    state.get('latitude'),
+                    state.get('longitude'),
                 ),
                 commit=True
             )
@@ -1460,7 +1595,7 @@ class MainWindow(QMainWindow):
                 # Load last state from database
                 row = self.execute_db(
                     """
-                    SELECT temperature, humidity, door_status, ventilation_status, buzzer_status
+                    SELECT temperature, humidity, door_status, ventilation_status, buzzer_status, latitude, longitude
                     FROM rack_data 
                     WHERE id=? 
                     ORDER BY timestamp DESC 
@@ -1471,7 +1606,7 @@ class MainWindow(QMainWindow):
                 )
 
                 if row:
-                    temp, hum, door, vent, buzz = row
+                    temp, hum, door, vent, buzz, lat, lon = row
                     # Update cache with DB data
                     state = self.ensure_rack_state(rack_id)
                     if temp is not None:
@@ -1486,6 +1621,10 @@ class MainWindow(QMainWindow):
                         state['ventilation_status'] = vent
                     if buzz is not None:
                         state['buzzer_status'] = buzz
+                    if lat is not None:
+                        state['latitude'] = lat
+                    if lon is not None:
+                        state['longitude'] = lon
                     
                     # Sync Rack object with state
                     self.syncRackFromState(self.currentRack, state)
