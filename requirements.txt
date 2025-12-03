@@ -1,0 +1,4 @@
+WeasyPrint
+Markdown
+PyYAML
+OpenAI
