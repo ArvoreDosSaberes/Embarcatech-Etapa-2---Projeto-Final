@@ -1,0 +1,9 @@
+[submodule "dashboard"]
+	path = dashboard
+	url = git@github.com:RapportTecnologia/Rack_inteligente_Dashboard.git
+[submodule "firmware"]
+	path = firmware
+	url = git@github.com:RapportTecnologia/Rack_inteligente_Firmware.git
+[submodule "Keyboard-Menu---workspace"]
+	path = Keyboard-Menu---workspace
+	url = git@github.com:ArvoreDosSaberes/Keyboard-Menu---workspace.git
