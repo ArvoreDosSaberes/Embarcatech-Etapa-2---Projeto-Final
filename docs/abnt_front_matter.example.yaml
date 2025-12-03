@@ -1,0 +1,34 @@
+# Exemplo de front matter para geração de PDF no formato ABNT
+# Preencha os campos conforme a orientação do projeto antes de executar o conversor.
+---
+title: "Rack Inteligente: Sistema de Gerenciamento e Segurança Ambiental"
+authors:
+  - "Nome Completo do Aluno"
+summary: "Resumo breve do documento em até 500 caracteres."
+language: "pt-BR"
+date: "2025-11-06"
+tags:
+  - "Projeto Final"
+  - "ABNT"
+  - "IoT"
+
+abnt:
+  institution: "Instituto Federal de Educação, Ciência e Tecnologia"
+  campus: "Campus Fortaleza"
+  department: "Departamento Acadêmico de Eletrônica"
+  course: "Curso Superior de Tecnologia em Redes de Computadores"
+  discipline: "Projeto Integrador"
+  nature: "Trabalho de Conclusão de Curso"
+  natureDetails: "apresentado ao Instituto Federal como requisito parcial para obtenção do título."
+  advisor:
+    name: "Prof. Dr. João da Silva"
+    title: "Doutor em Engenharia de Computação"
+    institution: "IFCE"
+  coAdvisor:
+    name: "Profa. M.Sc. Maria de Souza"
+    title: "Mestra em Automação Industrial"
+    institution: "IFCE"
+  studentId: "202510110980368"
+  city: "Fortaleza"
+  state: "CE"
+  year: "2025"
