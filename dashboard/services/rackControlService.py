@@ -5,12 +5,19 @@ Módulo responsável pelo controle de racks via MQTT.
 Contém a classe Rack que representa um rack físico e o serviço
 RackControlService que envia comandos para o firmware via MQTT.
 
+O sistema utiliza confirmação de comandos via ACK:
+- Dashboard envia comando em: {base}/{rack_id}/command/{door|ventilation|buzzer}
+- Firmware confirma em: {base}/{rack_id}/ack/{door|ventilation|buzzer}
+- Dashboard só atualiza a UI após receber confirmação do firmware
+
 Autor: Dashboard Rack Inteligente - EmbarcaTech
 """
 
 import os
+import time
+import threading
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, Dict, Callable, Any
 from enum import IntEnum
 
 
@@ -71,17 +78,48 @@ class Rack:
         return self.buzzerStatus != BuzzerStatus.OFF
 
 
+@dataclass
+class PendingCommand:
+    """
+    Representa um comando pendente aguardando confirmação do firmware.
+    
+    Attributes:
+        rackId: ID do rack alvo
+        commandType: Tipo de comando (door, ventilation, buzzer)
+        value: Valor enviado no comando
+        timestamp: Momento em que o comando foi enviado
+        callback: Callback a ser chamado quando confirmado (opcional)
+    """
+    rackId: str
+    commandType: str
+    value: int
+    timestamp: float = field(default_factory=time.time)
+    callback: Optional[Callable[[bool], None]] = None
+
+
 class RackControlService:
     """
-    Serviço de controle de racks via MQTT.
+    Serviço de controle de racks via MQTT com confirmação de comandos.
     
-    Envia comandos para os racks através do broker MQTT,
-    permitindo que o firmware dos dispositivos execute as ações.
+    Envia comandos para os racks através do broker MQTT e aguarda
+    confirmação (ACK) do firmware antes de atualizar o estado.
+    
+    Fluxo de comunicação:
+    1. Dashboard publica comando em: {base}/{rack_id}/command/{type}
+    2. Firmware executa o comando
+    3. Firmware publica confirmação em: {base}/{rack_id}/ack/{type}
+    4. Dashboard recebe ACK e atualiza a UI
     
     Attributes:
         mqttClient: Cliente MQTT para publicação de comandos
         baseTopic: Tópico base para comandos MQTT
+        pendingCommands: Dicionário de comandos aguardando confirmação
+        commandTimeout: Tempo limite para confirmação (segundos)
+        onAckReceived: Callback chamado quando ACK é recebido
     """
+    
+    # Tempo limite padrão para confirmação de comandos (5 segundos)
+    DEFAULT_COMMAND_TIMEOUT = 5.0
     
     def __init__(self, mqttClient, baseTopic: Optional[str] = None):
         """
@@ -93,15 +131,43 @@ class RackControlService:
         """
         self.mqttClient = mqttClient
         self.baseTopic = baseTopic or os.getenv("MQTT_BASE_TOPIC", "racks").rstrip("/")
+        
+        # Dicionário de comandos pendentes: chave = "{rackId}:{commandType}"
+        self.pendingCommands: Dict[str, PendingCommand] = {}
+        self._pendingLock = threading.Lock()
+        
+        # Tempo limite para confirmação de comandos
+        self.commandTimeout = float(os.getenv("COMMAND_ACK_TIMEOUT", str(self.DEFAULT_COMMAND_TIMEOUT)))
+        
+        # Callback externo para notificar quando ACK é recebido
+        self.onAckReceived: Optional[Callable[[str, str, int, bool], None]] = None
     
-    def _publishCommand(self, rack: Rack, commandType: str, value: int) -> bool:
+    def _getPendingKey(self, rackId: str, commandType: str) -> str:
+        """
+        Gera a chave única para um comando pendente.
+        
+        Args:
+            rackId: ID do rack
+            commandType: Tipo de comando
+            
+        Returns:
+            str: Chave no formato "{rackId}:{commandType}"
+        """
+        return f"{rackId}:{commandType}"
+    
+    def _publishCommand(self, rack: Rack, commandType: str, value: int, 
+                        callback: Optional[Callable[[bool], None]] = None) -> bool:
         """
         Publica um comando MQTT para o rack especificado.
+        
+        O comando é registrado como pendente até receber confirmação
+        do firmware. A UI NÃO é atualizada até o ACK ser recebido.
         
         Args:
             rack: Instância do rack alvo
             commandType: Tipo de comando (door, ventilation, buzzer)
             value: Valor do comando
+            callback: Função opcional chamada quando ACK recebido
             
         Returns:
             bool: True se publicado com sucesso, False caso contrário
@@ -114,7 +180,17 @@ class RackControlService:
         try:
             result = self.mqttClient.publish(topic, str(value))
             if result.rc == 0:
-                print(f"[RackControlService/Command] 📤 Sent {commandType}={value} to rack {rack.rackId}")
+                # Registra comando como pendente aguardando ACK
+                pendingKey = self._getPendingKey(rack.rackId, commandType)
+                with self._pendingLock:
+                    self.pendingCommands[pendingKey] = PendingCommand(
+                        rackId=rack.rackId,
+                        commandType=commandType,
+                        value=value,
+                        timestamp=time.time(),
+                        callback=callback
+                    )
+                print(f"[RackControlService/Command] 📤 Sent {commandType}={value} to rack {rack.rackId} (awaiting ACK)")
                 return True
             else:
                 print(f"[RackControlService/Error] ❌ Failed to publish: rc={result.rc}")
@@ -123,35 +199,136 @@ class RackControlService:
             print(f"[RackControlService/Error] ❌ Exception publishing command: {e}")
             return False
     
-    def openDoor(self, rack: Rack) -> bool:
+    def processAck(self, rackId: str, commandType: str, value: int) -> bool:
+        """
+        Processa uma confirmação (ACK) recebida do firmware.
+        
+        Remove o comando da lista de pendentes e notifica via callback.
+        
+        Args:
+            rackId: ID do rack que confirmou
+            commandType: Tipo de comando confirmado (door, ventilation, buzzer)
+            value: Valor confirmado pelo firmware
+            
+        Returns:
+            bool: True se havia comando pendente correspondente
+        """
+        pendingKey = self._getPendingKey(rackId, commandType)
+        pendingCmd = None
+        
+        with self._pendingLock:
+            if pendingKey in self.pendingCommands:
+                pendingCmd = self.pendingCommands.pop(pendingKey)
+        
+        if pendingCmd:
+            success = (pendingCmd.value == value)
+            print(f"[RackControlService/ACK] ✅ Received ACK for {commandType}={value} from rack {rackId}")
+            
+            # Chama callback do comando se existir
+            if pendingCmd.callback:
+                try:
+                    pendingCmd.callback(success)
+                except Exception as e:
+                    print(f"[RackControlService/Error] ❌ Callback error: {e}")
+            
+            # Notifica callback externo
+            if self.onAckReceived:
+                try:
+                    self.onAckReceived(rackId, commandType, value, success)
+                except Exception as e:
+                    print(f"[RackControlService/Error] ❌ External callback error: {e}")
+            
+            return True
+        else:
+            print(f"[RackControlService/ACK] ⚠️ Unexpected ACK for {commandType}={value} from rack {rackId} (no pending command)")
+            return False
+    
+    def hasPendingCommand(self, rackId: str, commandType: str) -> bool:
+        """
+        Verifica se há comando pendente para um rack/tipo específico.
+        
+        Args:
+            rackId: ID do rack
+            commandType: Tipo de comando
+            
+        Returns:
+            bool: True se há comando pendente
+        """
+        pendingKey = self._getPendingKey(rackId, commandType)
+        with self._pendingLock:
+            return pendingKey in self.pendingCommands
+    
+    def getExpiredCommands(self) -> list:
+        """
+        Retorna lista de comandos que expiraram (sem ACK no tempo limite).
+        
+        Returns:
+            list: Lista de PendingCommand expirados
+        """
+        expired = []
+        currentTime = time.time()
+        
+        with self._pendingLock:
+            expiredKeys = []
+            for key, cmd in self.pendingCommands.items():
+                if currentTime - cmd.timestamp > self.commandTimeout:
+                    expired.append(cmd)
+                    expiredKeys.append(key)
+            
+            # Remove comandos expirados
+            for key in expiredKeys:
+                del self.pendingCommands[key]
+                
+        return expired
+    
+    def clearPendingCommands(self, rackId: Optional[str] = None):
+        """
+        Limpa comandos pendentes.
+        
+        Args:
+            rackId: Se especificado, limpa apenas comandos deste rack.
+                    Se None, limpa todos os comandos pendentes.
+        """
+        with self._pendingLock:
+            if rackId is None:
+                self.pendingCommands.clear()
+            else:
+                keysToRemove = [k for k in self.pendingCommands 
+                               if k.startswith(f"{rackId}:")]
+                for key in keysToRemove:
+                    del self.pendingCommands[key]
+    
+    def openDoor(self, rack: Rack, callback: Optional[Callable[[bool], None]] = None) -> bool:
         """
         Abre a porta do rack.
         
-        Args:
-            rack: Instância do rack
-            
-        Returns:
-            bool: True se comando enviado com sucesso
-        """
-        success = self._publishCommand(rack, "door", DoorStatus.OPEN)
-        if success:
-            rack.doorStatus = DoorStatus.OPEN
-        return success
-    
-    def closeDoor(self, rack: Rack) -> bool:
-        """
-        Fecha a porta do rack.
+        O estado da porta NÃO é atualizado imediatamente.
+        A atualização ocorre apenas quando o firmware confirma via ACK.
         
         Args:
             rack: Instância do rack
+            callback: Função chamada quando ACK recebido (opcional)
             
         Returns:
-            bool: True se comando enviado com sucesso
+            bool: True se comando enviado com sucesso (não significa executado)
         """
-        success = self._publishCommand(rack, "door", DoorStatus.CLOSED)
-        if success:
-            rack.doorStatus = DoorStatus.CLOSED
-        return success
+        return self._publishCommand(rack, "door", DoorStatus.OPEN, callback)
+    
+    def closeDoor(self, rack: Rack, callback: Optional[Callable[[bool], None]] = None) -> bool:
+        """
+        Fecha a porta do rack.
+        
+        O estado da porta NÃO é atualizado imediatamente.
+        A atualização ocorre apenas quando o firmware confirma via ACK.
+        
+        Args:
+            rack: Instância do rack
+            callback: Função chamada quando ACK recebido (opcional)
+            
+        Returns:
+            bool: True se comando enviado com sucesso (não significa executado)
+        """
+        return self._publishCommand(rack, "door", DoorStatus.CLOSED, callback)
     
     def toggleDoor(self, rack: Rack) -> bool:
         """
@@ -168,35 +345,37 @@ class RackControlService:
         else:
             return self.openDoor(rack)
     
-    def turnOnVentilation(self, rack: Rack) -> bool:
+    def turnOnVentilation(self, rack: Rack, callback: Optional[Callable[[bool], None]] = None) -> bool:
         """
         Liga a ventilação do rack.
         
-        Args:
-            rack: Instância do rack
-            
-        Returns:
-            bool: True se comando enviado com sucesso
-        """
-        success = self._publishCommand(rack, "ventilation", VentilationStatus.ON)
-        if success:
-            rack.ventilationStatus = VentilationStatus.ON
-        return success
-    
-    def turnOffVentilation(self, rack: Rack) -> bool:
-        """
-        Desliga a ventilação do rack.
+        O estado da ventilação NÃO é atualizado imediatamente.
+        A atualização ocorre apenas quando o firmware confirma via ACK.
         
         Args:
             rack: Instância do rack
+            callback: Função chamada quando ACK recebido (opcional)
             
         Returns:
-            bool: True se comando enviado com sucesso
+            bool: True se comando enviado com sucesso (não significa executado)
         """
-        success = self._publishCommand(rack, "ventilation", VentilationStatus.OFF)
-        if success:
-            rack.ventilationStatus = VentilationStatus.OFF
-        return success
+        return self._publishCommand(rack, "ventilation", VentilationStatus.ON, callback)
+    
+    def turnOffVentilation(self, rack: Rack, callback: Optional[Callable[[bool], None]] = None) -> bool:
+        """
+        Desliga a ventilação do rack.
+        
+        O estado da ventilação NÃO é atualizado imediatamente.
+        A atualização ocorre apenas quando o firmware confirma via ACK.
+        
+        Args:
+            rack: Instância do rack
+            callback: Função chamada quando ACK recebido (opcional)
+            
+        Returns:
+            bool: True se comando enviado com sucesso (não significa executado)
+        """
+        return self._publishCommand(rack, "ventilation", VentilationStatus.OFF, callback)
     
     def toggleVentilation(self, rack: Rack) -> bool:
         """
@@ -213,77 +392,85 @@ class RackControlService:
         else:
             return self.turnOnVentilation(rack)
     
-    def activateCriticalTemperatureAlert(self, rack: Rack) -> bool:
+    def activateCriticalTemperatureAlert(self, rack: Rack, callback: Optional[Callable[[bool], None]] = None) -> bool:
         """
         Ativa o alerta de temperatura crítica (superaquecimento).
         
+        O estado do buzzer NÃO é atualizado imediatamente.
+        A atualização ocorre apenas quando o firmware confirma via ACK.
+        
         Args:
             rack: Instância do rack
+            callback: Função chamada quando ACK recebido (opcional)
             
         Returns:
-            bool: True se comando enviado com sucesso
+            bool: True se comando enviado com sucesso (não significa executado)
         """
-        success = self._publishCommand(rack, "buzzer", BuzzerStatus.OVERHEAT)
-        if success:
-            rack.buzzerStatus = BuzzerStatus.OVERHEAT
-        return success
+        return self._publishCommand(rack, "buzzer", BuzzerStatus.OVERHEAT, callback)
     
-    def deactivateCriticalTemperatureAlert(self, rack: Rack) -> bool:
+    def deactivateCriticalTemperatureAlert(self, rack: Rack, callback: Optional[Callable[[bool], None]] = None) -> bool:
         """
         Desativa o alerta de temperatura crítica.
         
+        O estado do buzzer NÃO é atualizado imediatamente.
+        A atualização ocorre apenas quando o firmware confirma via ACK.
+        
         Args:
             rack: Instância do rack
+            callback: Função chamada quando ACK recebido (opcional)
             
         Returns:
-            bool: True se comando enviado com sucesso
+            bool: True se comando enviado com sucesso (não significa executado)
         """
-        success = self._publishCommand(rack, "buzzer", BuzzerStatus.OFF)
-        if success:
-            rack.buzzerStatus = BuzzerStatus.OFF
-        return success
+        return self._publishCommand(rack, "buzzer", BuzzerStatus.OFF, callback)
     
-    def activateDoorOpenAlert(self, rack: Rack) -> bool:
+    def activateDoorOpenAlert(self, rack: Rack, callback: Optional[Callable[[bool], None]] = None) -> bool:
         """
         Ativa o alerta de porta aberta.
         
+        O estado do buzzer NÃO é atualizado imediatamente.
+        A atualização ocorre apenas quando o firmware confirma via ACK.
+        
         Args:
             rack: Instância do rack
+            callback: Função chamada quando ACK recebido (opcional)
             
         Returns:
-            bool: True se comando enviado com sucesso
+            bool: True se comando enviado com sucesso (não significa executado)
         """
-        success = self._publishCommand(rack, "buzzer", BuzzerStatus.DOOR_OPEN)
-        if success:
-            rack.buzzerStatus = BuzzerStatus.DOOR_OPEN
-        return success
+        return self._publishCommand(rack, "buzzer", BuzzerStatus.DOOR_OPEN, callback)
     
-    def activateBreakInAlert(self, rack: Rack) -> bool:
+    def activateBreakInAlert(self, rack: Rack, callback: Optional[Callable[[bool], None]] = None) -> bool:
         """
         Ativa o alerta de arrombamento.
         
-        Args:
-            rack: Instância do rack
-            
-        Returns:
-            bool: True se comando enviado com sucesso
-        """
-        success = self._publishCommand(rack, "buzzer", BuzzerStatus.BREAK_IN)
-        if success:
-            rack.buzzerStatus = BuzzerStatus.BREAK_IN
-        return success
-    
-    def silenceBuzzer(self, rack: Rack) -> bool:
-        """
-        Silencia o buzzer do rack.
+        O estado do buzzer NÃO é atualizado imediatamente.
+        A atualização ocorre apenas quando o firmware confirma via ACK.
         
         Args:
             rack: Instância do rack
+            callback: Função chamada quando ACK recebido (opcional)
             
         Returns:
-            bool: True se comando enviado com sucesso
+            bool: True se comando enviado com sucesso (não significa executado)
         """
-        return self.deactivateCriticalTemperatureAlert(rack)
+        return self._publishCommand(rack, "buzzer", BuzzerStatus.BREAK_IN, callback)
+    
+    def silenceBuzzer(self, rack: Rack, callback: Optional[Callable[[bool], None]] = None) -> bool:
+        """
+        Silencia o buzzer do rack.
+        
+        O estado do buzzer NÃO é atualizado imediatamente.
+        A atualização ocorre apenas quando o firmware confirma via ACK.
+        
+        Args:
+            rack: Instância do rack
+            callback: Função chamada quando ACK recebido (opcional)
+            
+        Returns:
+            bool: True se comando enviado com sucesso (não significa executado)
+        """
+        return self.deactivateCriticalTemperatureAlert(rack, callback)
     
     # Métodos com nomes em português para compatibilidade
     def abrirPorta(self, rack: Rack) -> bool:

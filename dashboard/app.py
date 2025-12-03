@@ -14,13 +14,14 @@ WORKSPACE_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 load_dotenv(os.path.join(WORKSPACE_ROOT, ".env"))
 
 import paho.mqtt.client as mqtt
-from PyQt5.QtCore import pyqtSignal, Qt, QPoint as _QPoint, QSize as _QSize, QRect as _QRect, QRectF as _QRectF, QMargins, QTimer
+from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QPoint as _QPoint, QSize as _QSize, QRect as _QRect, QRectF as _QRectF, QMargins, QTimer
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QListWidget, QListWidgetItem, QWidget, QVBoxLayout, QLabel, 
     QHBoxLayout, QPushButton, QFrame, QGridLayout, QScrollArea, QSplitter
 )
 from PyQt5.QtChart import QChart, QChartView, QLineSeries, QValueAxis
 from PyQt5.QtWebEngineWidgets import QWebEngineView
+from PyQt5.QtWebChannel import QWebChannel
 from PyQt5.QtGui import QPainter as _QPainter, QFont as _QFont, QPen as _QPen, QIcon, QColor, QBrush
 
 # Monkey-patch QPoint to handle float arguments (fix for AnalogGaugeWidget compatibility)
@@ -235,6 +236,13 @@ class MainWindow(QMainWindow):
         self.aiAnalysisTimer.setInterval(aiInterval)
         self.aiAnalysisTimer.timeout.connect(self.runAiAnalysis)
         self.aiAnalysisTimer.start()
+
+        # Timer para verificar comandos pendentes expirados
+        # Verifica a cada 1 segundo se há comandos que não receberam ACK
+        self.commandTimeoutTimer = QTimer(self)
+        self.commandTimeoutTimer.setInterval(1000)  # 1 segundo
+        self.commandTimeoutTimer.timeout.connect(self.checkExpiredCommands)
+        self.commandTimeoutTimer.start()
 
         # Dicionário para controle de piscagem de racks
         self.blinkingRacks: dict[str, QTimer] = {}
@@ -871,44 +879,147 @@ class MainWindow(QMainWindow):
         
         # Map view usando Leaflet.js + OpenStreetMap (opensource)
         self.map_view = QWebEngineView()
-        self.map_view.setMinimumHeight(300)
-        initial_map = self.generate_leaflet_map_html()
+        self.map_view.setMinimumHeight(600)
+        
+        # Configura WebChannel para comunicação JavaScript <-> Python
+        self.map_channel = QWebChannel()
+        self.map_channel.registerObject("pybridge", self)
+        self.map_view.page().setWebChannel(self.map_channel)
+        
+        initial_map = self.generate_all_racks_map_html()
         self.map_view.setHtml(initial_map)
         layout.addWidget(self.map_view)
         
         return section
     
-    def generate_leaflet_map_html(self, latitude: float = None, longitude: float = None, rack_id: str = None) -> str:
+    @pyqtSlot(str)
+    def selectRackFromMap(self, rack_id: str):
         """
-        Gera o HTML para exibir o mapa usando Leaflet.js + OpenStreetMap.
+        Callback chamado pelo JavaScript quando um rack é clicado no mapa.
+        Seleciona o rack correspondente na lista lateral.
+        
+        Args:
+            rack_id: ID do rack clicado
+        """
+        print(f"[UI/Map] 📍 Rack {rack_id} clicado no mapa")
+        
+        # Encontra o item na lista
+        items = self.list_widget.findItems(f"Rack {rack_id}", Qt.MatchExactly)
+        if items:
+            self.list_widget.setCurrentItem(items[0])
+    
+    def generate_all_racks_map_html(self, selected_rack_id: str = None) -> str:
+        """
+        Gera o HTML para exibir o mapa com TODOS os racks simultaneamente.
         
         OpenStreetMap é um mapa opensource gratuito com licença ODbL.
         Leaflet.js é uma biblioteca JavaScript opensource (BSD-2-Clause).
         
         Args:
-            latitude: Latitude do rack (default: centro de Fortaleza-CE)
-            longitude: Longitude do rack (default: centro de Fortaleza-CE)
-            rack_id: ID do rack para exibir no popup
+            selected_rack_id: ID do rack atualmente selecionado (para destacar)
             
         Returns:
-            HTML completo com mapa Leaflet/OpenStreetMap
+            HTML completo com mapa Leaflet/OpenStreetMap e todos os racks
         """
         # Centro de Fortaleza-CE como padrão
         default_lat = -3.7319
         default_lon = -38.5267
         
-        lat = latitude if latitude is not None else default_lat
-        lon = longitude if longitude is not None else default_lon
+        # Coleta todos os racks com coordenadas
+        racks_data = []
+        for rack_id, state in self.rack_states.items():
+            lat = state.get('latitude')
+            lon = state.get('longitude')
+            if lat is not None and lon is not None:
+                racks_data.append({
+                    'id': rack_id,
+                    'lat': lat,
+                    'lon': lon,
+                    'state': state
+                })
         
-        # Determina zoom e mensagem do popup
-        if latitude is not None and longitude is not None and rack_id:
-            zoom = 15
-            popup_content = f"<b>🖥️ Rack {rack_id}</b><br>📍 Lat: {lat:.6f}<br>📍 Lon: {lon:.6f}"
-            marker_visible = "true"
-        else:
+        # Determina centro e zoom
+        if selected_rack_id and selected_rack_id in self.rack_states:
+            state = self.rack_states[selected_rack_id]
+            center_lat = state.get('latitude', default_lat)
+            center_lon = state.get('longitude', default_lon)
+            zoom = 14
+        elif racks_data:
+            # Centraliza na média de todos os racks
+            center_lat = sum(r['lat'] for r in racks_data) / len(racks_data)
+            center_lon = sum(r['lon'] for r in racks_data) / len(racks_data)
             zoom = 12
-            popup_content = "Aguardando dados de localização..."
-            marker_visible = "false"
+        else:
+            center_lat = default_lat
+            center_lon = default_lon
+            zoom = 12
+        
+        # Gera JavaScript para cada marcador
+        markers_js = ""
+        for rack in racks_data:
+            rid = rack['id']
+            rlat = rack['lat']
+            rlon = rack['lon']
+            rstate = rack['state']
+            is_selected = rid == selected_rack_id
+            
+            # Monta conteúdo do popup
+            popup_lines = [f"<b>🖥️ Rack {rid}</b>"]
+            
+            temp = rstate.get('temperature')
+            if temp is not None:
+                temp_icon = "🔥" if temp > 35 else "❄️" if temp < 18 else "🌡️"
+                popup_lines.append(f"{temp_icon} Temp: {temp:.1f}°C")
+            
+            hum = rstate.get('humidity')
+            if hum is not None:
+                hum_icon = "💧" if hum > 70 else "🏜️" if hum < 30 else "💨"
+                popup_lines.append(f"{hum_icon} Umidade: {hum:.1f}%")
+            
+            door = rstate.get('door_status')
+            if door is not None:
+                door_text = "ABERTA" if door == 1 else "FECHADA"
+                door_icon = "🚪" if door == 1 else "🔒"
+                popup_lines.append(f"{door_icon} Porta: {door_text}")
+            
+            vent = rstate.get('ventilation_status')
+            if vent is not None:
+                vent_text = "LIGADA" if vent == 1 else "DESLIGADA"
+                vent_icon = "💨" if vent == 1 else "🛑"
+                popup_lines.append(f"{vent_icon} Ventilação: {vent_text}")
+            
+            buzzer = rstate.get('buzzer_status')
+            if buzzer is not None and buzzer > 0:
+                buzzer_states = {1: '🔔 Porta Aberta', 2: '🚨 ARROMBAMENTO', 3: '🔥 SUPERAQUECIMENTO'}
+                popup_lines.append(buzzer_states.get(buzzer, ''))
+            
+            popup_lines.append(f"<small>📍 {rlat:.6f}, {rlon:.6f}</small>")
+            popup_content = "<br>".join(popup_lines)
+            
+            # Cor do marcador: azul escuro para selecionado, azul claro para outros
+            bg_color = "#2c3e50" if is_selected else "#3498db"
+            border = "3px solid #f39c12" if is_selected else "none"
+            
+            markers_js += f"""
+                (function() {{
+                    var rackIcon = L.divIcon({{
+                        className: 'rack-marker',
+                        html: '<div style="background-color: {bg_color}; color: white; padding: 5px 10px; border-radius: 5px; font-weight: bold; font-size: 11px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); border: {border}; cursor: pointer;">🖥️ {rid}</div>',
+                        iconSize: [80, 25],
+                        iconAnchor: [40, 25],
+                        popupAnchor: [0, -25]
+                    }});
+                    var marker = L.marker([{rlat}, {rlon}], {{icon: rackIcon}}).addTo(map);
+                    marker.bindPopup("{popup_content}");
+                    marker.on('click', function() {{
+                        if (window.pybridge) {{
+                            window.pybridge.selectRackFromMap("{rid}");
+                        }}
+                    }});
+                    markers["{rid}"] = marker;
+                    {"marker.openPopup();" if is_selected else ""}
+                }})();
+            """
         
         html = f"""
         <!DOCTYPE html>
@@ -916,14 +1027,14 @@ class MainWindow(QMainWindow):
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Mapa do Rack</title>
-            <!-- Leaflet.js - Biblioteca opensource (BSD-2-Clause License) -->
+            <title>Mapa dos Racks</title>
             <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
                   integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
                   crossorigin=""/>
             <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
                     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
                     crossorigin=""></script>
+            <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
             <style>
                 html, body {{
                     margin: 0;
@@ -945,48 +1056,65 @@ class MainWindow(QMainWindow):
             <div id="map"></div>
             <script>
                 // Inicializa o mapa centrado em Fortaleza-CE, Brasil
-                var map = L.map('map').setView([{lat}, {lon}], {zoom});
+                var map = L.map('map').setView([{center_lat}, {center_lon}], {zoom});
+                var markers = {{}};
                 
-                // Tiles do OpenStreetMap (ODbL License - Open Data Commons)
-                // Uso gratuito com atribuição obrigatória
+                // Tiles do OpenStreetMap (ODbL License)
                 L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
                     maxZoom: 19,
                     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                 }}).addTo(map);
                 
-                // Adiciona marcador se temos localização válida
-                if ({marker_visible}) {{
-                    var marker = L.marker([{lat}, {lon}]).addTo(map);
-                    marker.bindPopup("{popup_content}").openPopup();
-                    
-                    // Ícone personalizado para o rack
-                    var rackIcon = L.divIcon({{
-                        className: 'rack-marker',
-                        html: '<div style="background-color: #3498db; color: white; padding: 5px 10px; border-radius: 5px; font-weight: bold; font-size: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.3);">🖥️ Rack</div>',
-                        iconSize: [80, 30],
-                        iconAnchor: [40, 30],
-                        popupAnchor: [0, -30]
-                    }});
-                    marker.setIcon(rackIcon);
-                }}
+                // Configura comunicação com Python via WebChannel
+                new QWebChannel(qt.webChannelTransport, function(channel) {{
+                    window.pybridge = channel.objects.pybridge;
+                }});
+                
+                // Adiciona marcadores para todos os racks
+                {markers_js}
+                
+                // Função para centralizar no rack (chamada pelo Python)
+                window.centerOnRack = function(rackId) {{
+                    if (markers[rackId]) {{
+                        map.setView(markers[rackId].getLatLng(), 14);
+                        markers[rackId].openPopup();
+                    }}
+                }};
             </script>
         </body>
         </html>
         """
         return html
     
-    def update_map_view(self, rack_id: str, latitude: float, longitude: float):
+    def update_map_view(self, rack_id: str = None, force: bool = False):
         """
-        Atualiza o mapa com a localização do rack selecionado.
+        Atualiza o mapa com todos os racks, destacando o selecionado.
+        
+        O mapa só é atualizado se houver mudanças ou se force=True.
         
         Args:
-            rack_id: ID do rack
-            latitude: Latitude do rack
-            longitude: Longitude do rack
+            rack_id: ID do rack selecionado (para destacar e centralizar)
+            force: Força atualização mesmo se não houve mudanças
         """
-        if hasattr(self, 'map_view') and self.map_view is not None:
-            map_html = self.generate_leaflet_map_html(latitude, longitude, rack_id)
-            self.map_view.setHtml(map_html)
+        if not hasattr(self, 'map_view') or self.map_view is None:
+            return
+        
+        # Gera hash do estado atual para detectar mudanças
+        current_hash = hash((rack_id, len(self.rack_states), str(sorted(self.rack_states.keys()))))
+        last_hash = getattr(self, '_last_map_hash', None)
+        
+        if not force and last_hash == current_hash:
+            # Nenhuma mudança, apenas centraliza no rack se necessário
+            if rack_id:
+                self.map_view.page().runJavaScript(f'if(window.centerOnRack) centerOnRack("{rack_id}");')
+            return
+        
+        # Armazena hash atual
+        self._last_map_hash = current_hash
+        
+        map_html = self.generate_all_racks_map_html(rack_id)
+        self.map_view.setHtml(map_html)
+        print(f"[UI/Map] 🗺️ Mapa atualizado com {len(self.rack_states)} racks")
     
     def create_status_bar(self):
         """Create status bar for AI actions display"""
@@ -1182,40 +1310,45 @@ class MainWindow(QMainWindow):
         state['buzzer_status'] = int(rack.buzzerStatus)
 
     def toggle_door(self):
-        """Toggle door state (open/close) using RackControlService"""
+        """
+        Toggle door state (open/close) using RackControlService.
+        
+        A atualização da UI NÃO é feita imediatamente.
+        O estado só será atualizado quando o firmware confirmar via ACK.
+        """
         if not self.currentRack:
             print("[UI/Warning] ⚠️  No rack selected")
             return
         
-        # Use the service to toggle door
+        # Use the service to toggle door - UI update will happen on ACK
         success = self.rackControlService.toggleDoor(self.currentRack)
         
         if success:
-            # Optimistic UI update
-            state = self.ensure_rack_state(self.current_rack_id)
-            self.syncStateFromRack(self.currentRack, state)
-            self.update_ui_from_state(self.current_rack_id, refresh_charts=False)
-            self.save_rack_state(self.current_rack_id)
+            print(f"[UI/Command] 🚀 Door command sent, awaiting firmware confirmation...")
 
     def toggle_ventilation(self):
-        """Toggle ventilation state (on/off) using RackControlService"""
+        """
+        Toggle ventilation state (on/off) using RackControlService.
+        
+        A atualização da UI NÃO é feita imediatamente.
+        O estado só será atualizado quando o firmware confirmar via ACK.
+        """
         if not self.currentRack:
             print("[UI/Warning] ⚠️  No rack selected")
             return
         
-        # Use the service to toggle ventilation
+        # Use the service to toggle ventilation - UI update will happen on ACK
         success = self.rackControlService.toggleVentilation(self.currentRack)
         
         if success:
-            # Optimistic UI update
-            state = self.ensure_rack_state(self.current_rack_id)
-            self.syncStateFromRack(self.currentRack, state)
-            self.update_ui_from_state(self.current_rack_id, refresh_charts=False)
-            self.save_rack_state(self.current_rack_id)
+            print(f"[UI/Command] 🚀 Ventilation command sent, awaiting firmware confirmation...")
 
     def send_command(self, command_type, value):
         """
         Send MQTT command to rack using RackControlService.
+        
+        A atualização da UI NÃO é feita imediatamente.
+        O estado só será atualizado quando o firmware confirmar via ACK.
         
         This method is kept for backward compatibility but now delegates
         to RackControlService methods.
@@ -1246,10 +1379,7 @@ class MainWindow(QMainWindow):
                 success = self.rackControlService.activateBreakInAlert(self.currentRack)
         
         if success:
-            state = self.ensure_rack_state(self.current_rack_id)
-            self.syncStateFromRack(self.currentRack, state)
-            self.update_ui_from_state(self.current_rack_id, refresh_charts=False)
-            self.save_rack_state(self.current_rack_id)
+            print(f"[UI/Command] 🚀 {command_type} command sent, awaiting firmware confirmation...")
 
     def setup_mqtt(self):
         """Configure and connect to MQTT broker"""
@@ -1288,6 +1418,10 @@ class MainWindow(QMainWindow):
             f"{base}/+/command/door",
             f"{base}/+/command/ventilation",
             f"{base}/+/command/buzzer",
+            # Tópicos de confirmação (ACK) do firmware
+            f"{base}/+/ack/door",
+            f"{base}/+/ack/ventilation",
+            f"{base}/+/ack/buzzer",
         ]
         
         for topic in topics:
@@ -1397,6 +1531,32 @@ class MainWindow(QMainWindow):
                     print(f"[MQTT/Location] 📍 Rack {rack_id} location: lat={state['latitude']:.6f}, lon={state['longitude']:.6f}")
                 except (json.JSONDecodeError, ValueError, TypeError) as e:
                     print(f"[MQTT/Error] ❌ Invalid location data for rack {rack_id}: {e}")
+            
+            # Processa confirmações (ACK) do firmware
+            elif topic.endswith('/ack/door'):
+                # Confirmação de comando de porta recebida do firmware
+                raw_value = int(payload)
+                state['door_status'] = 1 if raw_value == 1 else 0
+                rack.doorStatus = DoorStatus(state['door_status'])
+                self.rackControlService.processAck(rack_id, "door", raw_value)
+                print(f"[MQTT/ACK] ✅ Rack {rack_id} door ACK: {'OPEN' if state['door_status'] == 1 else 'CLOSED'}")
+            
+            elif topic.endswith('/ack/ventilation'):
+                # Confirmação de comando de ventilação recebida do firmware
+                raw_value = int(payload)
+                state['ventilation_status'] = 1 if raw_value == 1 else 0
+                rack.ventilationStatus = VentilationStatus(state['ventilation_status'])
+                self.rackControlService.processAck(rack_id, "ventilation", raw_value)
+                print(f"[MQTT/ACK] ✅ Rack {rack_id} ventilation ACK: {'ON' if state['ventilation_status'] == 1 else 'OFF'}")
+            
+            elif topic.endswith('/ack/buzzer'):
+                # Confirmação de comando de buzzer recebida do firmware
+                raw_value = int(payload)
+                state['buzzer_status'] = raw_value if 0 <= raw_value <= 3 else 0
+                rack.buzzerStatus = BuzzerStatus(state['buzzer_status'])
+                self.rackControlService.processAck(rack_id, "buzzer", raw_value)
+                buzzer_states = {0: 'Desligado', 1: 'Porta Aberta', 2: 'Arrombamento', 3: 'Superaquecimento'}
+                print(f"[MQTT/ACK] ✅ Rack {rack_id} buzzer ACK: {buzzer_states.get(state['buzzer_status'], 'Unknown')}")
 
             # Sync Rack object with updated state
             self.syncRackFromState(rack, state)
@@ -1536,11 +1696,8 @@ class MainWindow(QMainWindow):
                     """
                 )
 
-            # Update map with rack location
-            lat = state.get('latitude')
-            lon = state.get('longitude')
-            if lat is not None and lon is not None:
-                self.update_map_view(rack_id, lat, lon)
+            # Update map with all racks (only reloads if rack list changed)
+            self.update_map_view(rack_id)
 
         except Exception as e:
             print(f"[UI/Error] ❌ Error updating UI: {e}")
@@ -1640,6 +1797,9 @@ class MainWindow(QMainWindow):
     def reset_dashboard_metrics(self):
         """Clear gauge readings and chart series before showing another rack."""
         try:
+            # Reset map hash cache to force update on new rack selection
+            self._last_map_hash = None
+            
             # Reset door status label to neutral state
             if hasattr(self, 'door_status_label'):
                 self.door_status_label.setText("🚪 Status: --")
@@ -1883,7 +2043,14 @@ class MainWindow(QMainWindow):
             rackId: ID do rack onde a ação foi executada
             action: Nome da ação executada
         """
-        self.blinkRackItem(rackId)
+        # Ações de alerta usam fundo vermelho
+        alertActions = {
+            'activateCriticalTemperatureAlert',
+            'activateDoorOpenAlert',
+            'activateBreakInAlert'
+        }
+        isAlert = action in alertActions
+        self.blinkRackItem(rackId, isAlert=isAlert)
 
     def handleStatusUpdate(self, rackId: str, action: str, reason: str):
         """
@@ -1956,7 +2123,7 @@ class MainWindow(QMainWindow):
                 }
             """)
 
-    def blinkRackItem(self, rackId: str, duration: int = 2000, interval: int = 200):
+    def blinkRackItem(self, rackId: str, duration: int = 2000, interval: int = 200, isAlert: bool = False):
         """
         Faz um item de rack piscar no painel esquerdo.
         
@@ -1964,6 +2131,7 @@ class MainWindow(QMainWindow):
             rackId: ID do rack para piscar
             duration: Duração total do efeito de piscar em ms (default: 2000)
             interval: Intervalo entre piscadas em ms (default: 200)
+            isAlert: Se True, usa fundo vermelho para indicar alerta (default: False)
         """
         try:
             # Encontra o item na lista
@@ -1980,9 +2148,9 @@ class MainWindow(QMainWindow):
             if rackId in self.blinkingRacks:
                 self.blinkingRacks[rackId].stop()
             
-            # Cores para piscar
+            # Cores para piscar - vermelho para alertas, laranja para outras ações
             normalBg = "#34495e"
-            highlightBg = "#f39c12"  # Laranja para destaque
+            highlightBg = "#e74c3c" if isAlert else "#f39c12"  # Vermelho para alerta, laranja para destaque
             blinkState = {"on": False, "count": 0}
             maxBlinks = duration // interval
             
@@ -2040,6 +2208,26 @@ class MainWindow(QMainWindow):
                 
         except Exception as e:
             print(f"[UI/Blink] ❌ Erro ao parar piscagem: {e}")
+
+    def checkExpiredCommands(self):
+        """
+        Verifica comandos pendentes que expiraram (não receberam ACK a tempo).
+        
+        Comandos expirados são removidos da lista de pendentes e o usuário
+        é notificado via log. A UI não é atualizada para comandos expirados
+        (mantém o estado anterior).
+        """
+        if not self.rackControlService:
+            return
+        
+        expired = self.rackControlService.getExpiredCommands()
+        
+        for cmd in expired:
+            print(f"[UI/Timeout] ⏱️ Comando expirado: {cmd.commandType}={cmd.value} para rack {cmd.rackId}")
+            
+            # Notifica o usuário sobre o timeout
+            timeoutSeconds = self.rackControlService.commandTimeout
+            print(f"[UI/Timeout] ⚠️ Firmware não confirmou em {timeoutSeconds}s - comando pode não ter sido executado")
 
 if __name__ == "__main__":
     try:
