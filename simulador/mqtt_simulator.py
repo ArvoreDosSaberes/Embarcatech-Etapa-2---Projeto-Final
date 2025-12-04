@@ -36,6 +36,7 @@ def log_message(sector: str, rack_id: str, message: str, emoji: str) -> None:
 
 # Coordenadas fixas de locais em Fortaleza-CE, Brasil
 # Cada rack será associado a uma coordenada fixa (racks não se movem)
+# a tupla representa (latitude, longitude)
 FORTALEZA_COORDINATES: list[Tuple[float, float]] = [
     (-3.7319, -38.5267),   # Centro
     (-3.7403, -38.4993),   # Aldeota
@@ -52,6 +53,7 @@ FORTALEZA_COORDINATES: list[Tuple[float, float]] = [
     (-3.7834, -38.5912),   # Messejana
     (-3.7422, -38.4621),   # Edson Queiroz
     (-3.7956, -38.5234),   # Maraponga
+    (-3.9012, -38.3876),   # Aquiraz - Vereda Tropical
 ]
 
 

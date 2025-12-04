@@ -1243,8 +1243,15 @@ class MainWindow(QMainWindow):
                 'door_status': None,
                 'ventilation_status': None,
                 'buzzer_status': None,
+                # GPS data (padronizado com firmware)
                 'latitude': None,
                 'longitude': None,
+                'altitude': None,
+                'gps_time': None,
+                'gps_speed': None,
+                # Tilt sensor (padronizado com firmware)
+                'tilt': False,
+                # Historical data
                 'temperature_history': [],
                 'humidity_history': [],
                 'temperature_forecast': [],
@@ -1260,6 +1267,12 @@ class MainWindow(QMainWindow):
             state.setdefault('last_sample_timestamp', None)
             state.setdefault('latitude', None)
             state.setdefault('longitude', None)
+            # GPS data adicional (padronizado com firmware)
+            state.setdefault('altitude', None)
+            state.setdefault('gps_time', None)
+            state.setdefault('gps_speed', None)
+            # Tilt sensor (padronizado com firmware)
+            state.setdefault('tilt', False)
         return self.rack_states[rack_id]
 
     def getOrCreateRack(self, rackId: str) -> Rack:
@@ -1409,12 +1422,20 @@ class MainWindow(QMainWindow):
         print(f"[MQTT/Connection] 🔌 Connected with result code: {rc}")
         
         # Subscribe to all rack topics
+        # Tópicos padronizados com o firmware (origem):
+        # - environment/door: estado da porta (0=fechada, 1=aberta)
+        # - environment/temperature: temperatura ambiente
+        # - environment/humidity: umidade ambiente
+        # - gps: coordenadas GPS (latitude, longitude, altitude, time, speed)
+        # - tilt: inclinação detectada
+        # - ack/*: confirmações de comandos do firmware
         base = self.base_topic
         topics = [
-            f"{base}/+/status",
+            f"{base}/+/environment/door",
             f"{base}/+/environment/temperature",
             f"{base}/+/environment/humidity",
-            f"{base}/+/location",
+            f"{base}/+/gps",
+            f"{base}/+/tilt",
             f"{base}/+/command/door",
             f"{base}/+/command/ventilation",
             f"{base}/+/command/buzzer",
@@ -1480,11 +1501,12 @@ class MainWindow(QMainWindow):
             rack = self.getOrCreateRack(rack_id)
 
             # Update state based on topic
-            if topic.endswith('/status'):
-                # Porta só pode estar aberta (1) ou fechada (0)
+            if topic.endswith('/environment/door'):
+                # Estado da porta (lógica invertida no firmware - pull-up)
+                # 0 = fechada, 1 = aberta
                 raw_value = int(payload)
                 state['door_status'] = 1 if raw_value == 1 else 0
-                print(f"[MQTT/Status] 🚪 Rack {rack_id} door: {'Open' if state['door_status'] == 1 else 'Closed'}")
+                print(f"[MQTT/Environment] 🚪 Rack {rack_id} door: {'ABERTA' if state['door_status'] == 1 else 'FECHADA'}")
 
             elif topic.endswith('/environment/temperature'):
                 temp_value = float(payload)
@@ -1521,16 +1543,29 @@ class MainWindow(QMainWindow):
                 buzzer_states = {0: 'Desligado', 1: 'Porta Aberta', 2: 'Arrombamento', 3: 'Superaquecimento'}
                 print(f"[MQTT/Command] 🔔 Rack {rack_id} buzzer: {buzzer_states.get(state['buzzer_status'], 'Unknown')}")
 
-            elif topic.endswith('/location'):
-                # Processa coordenadas de localização do rack
+            elif topic.endswith('/gps'):
+                # Processa coordenadas GPS do rack (padronizado com firmware)
+                # Payload JSON: {latitude, longitude, altitude, time, speed}
                 try:
                     import json
-                    location_data = json.loads(payload)
-                    state['latitude'] = float(location_data.get('latitude', 0))
-                    state['longitude'] = float(location_data.get('longitude', 0))
-                    print(f"[MQTT/Location] 📍 Rack {rack_id} location: lat={state['latitude']:.6f}, lon={state['longitude']:.6f}")
+                    gps_data = json.loads(payload)
+                    state['latitude'] = float(gps_data.get('latitude', 0))
+                    state['longitude'] = float(gps_data.get('longitude', 0))
+                    state['altitude'] = float(gps_data.get('altitude', 0))
+                    state['gps_time'] = int(gps_data.get('time', 0))
+                    state['gps_speed'] = float(gps_data.get('speed', 0))
+                    print(f"[MQTT/GPS] 📍 Rack {rack_id} GPS: lat={state['latitude']:.6f}, lon={state['longitude']:.6f}, alt={state['altitude']:.1f}m")
                 except (json.JSONDecodeError, ValueError, TypeError) as e:
-                    print(f"[MQTT/Error] ❌ Invalid location data for rack {rack_id}: {e}")
+                    print(f"[MQTT/Error] ❌ Invalid GPS data for rack {rack_id}: {e}")
+            
+            elif topic.endswith('/tilt'):
+                # Processa estado de inclinação do rack (padronizado com firmware)
+                # Payload: "1" = inclinado, "0" = normal
+                tilt_value = int(payload)
+                state['tilt'] = tilt_value == 1
+                print(f"[MQTT/Tilt] ⚠️ Rack {rack_id} tilt: {'INCLINADO' if state['tilt'] else 'NORMAL'}")
+                if state['tilt']:
+                    print(f"[MQTT/Tilt] 🚨 ALERTA: Rack {rack_id} está inclinado!")
             
             # Processa confirmações (ACK) do firmware
             elif topic.endswith('/ack/door'):
