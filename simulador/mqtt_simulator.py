@@ -1,8 +1,54 @@
-"""Simulador de telemetria MQTT para racks inteligentes.
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Simulador de Telemetria MQTT para Racks Inteligentes.
 
 Este módulo gera leituras aleatórias de status, temperatura e umidade para
 racks distintos, inserindo anomalias de forma esporádica para validação de
 comportamento em cenário de teste.
+
+Funcionalidades:
+    - Geração de telemetria realista (temperatura, umidade, porta)
+    - Simulação de anomalias térmicas e de umidade
+    - Coordenadas GPS fixas de locais em Fortaleza-CE
+    - Resposta a comandos MQTT (porta, ventilação)
+    - Persistência de IDs de racks em SQLite
+    - Suporte a múltiplos racks simultâneos
+
+Arquitetura:
+    - RackState: Estrutura de dados do estado de um rack
+    - TelemetryPublisher: Publicador MQTT
+    - RackSimulator: Simulador de um rack individual
+    - run_simulation: Orquestrador da simulação
+
+Tópicos MQTT publicados:
+    - {base}/{rack_id}/environment/door: Estado da porta (0=fechada, 1=aberta)
+    - {base}/{rack_id}/environment/temperature: Temperatura em °C
+    - {base}/{rack_id}/environment/humidity: Umidade em %
+    - {base}/{rack_id}/gps: Coordenadas GPS (JSON)
+    - {base}/{rack_id}/tilt: Estado de inclinação
+    - {base}/{rack_id}/ack/*: Confirmações de comandos
+
+Tópicos MQTT assinados (comandos):
+    - {base}/{rack_id}/command/door: Comando de porta
+    - {base}/{rack_id}/command/ventilation: Comando de ventilação
+
+Autor:
+    EmbarcaTech TIC-27 - Rack Inteligente
+
+Data:
+    2025
+
+Exemplo de uso::
+
+    python mqtt_simulator.py --racks 5 --reset
+
+Variáveis de ambiente:
+    - MQTT_SERVER: Endereço do broker MQTT
+    - MQTT_PORT: Porta do broker (padrão: 1883)
+    - MQTT_USERNAME: Usuário MQTT (opcional)
+    - MQTT_PASSWORD: Senha MQTT (opcional)
+    - MQTT_BASE_TOPIC: Tópico base (padrão: "racks")
 """
 from __future__ import annotations
 

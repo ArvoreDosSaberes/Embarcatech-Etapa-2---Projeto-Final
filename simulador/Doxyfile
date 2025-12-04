@@ -1,0 +1,163 @@
+# Doxyfile - Simulador MQTT Rack Inteligente
+# Configuração Doxygen para documentação Python do Simulador
+# EmbarcaTech TIC-27 - 2025
+
+#---------------------------------------------------------------------------
+# Configurações do Projeto
+#---------------------------------------------------------------------------
+
+PROJECT_NAME           = "Simulador MQTT Rack Inteligente"
+PROJECT_NUMBER         = "1.0.0"
+PROJECT_BRIEF          = "Simulador de telemetria MQTT para testes do sistema de racks"
+PROJECT_LOGO           = 
+OUTPUT_DIRECTORY       = ./docs/doxygen
+CREATE_SUBDIRS         = YES
+OUTPUT_LANGUAGE        = Portuguese
+
+#---------------------------------------------------------------------------
+# Configurações de Build
+#---------------------------------------------------------------------------
+
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = YES
+EXTRACT_STATIC         = YES
+EXTRACT_LOCAL_CLASSES  = YES
+EXTRACT_LOCAL_METHODS  = YES
+EXTRACT_ANON_NSPACES   = YES
+
+#---------------------------------------------------------------------------
+# Configurações de Entrada
+#---------------------------------------------------------------------------
+
+INPUT                  = .
+INPUT_ENCODING         = UTF-8
+FILE_PATTERNS          = *.py
+RECURSIVE              = NO
+EXCLUDE                = __pycache__
+EXCLUDE_PATTERNS       = */__pycache__/*
+
+#---------------------------------------------------------------------------
+# Configurações de Parsing Python
+#---------------------------------------------------------------------------
+
+EXTENSION_MAPPING      = py=Python
+
+# Usar filtro doxypypy para melhor parsing de Python
+# Instalar: pip install doxypypy
+# FILTER_PATTERNS        = *.py="python -m doxypypy -a -c"
+
+OPTIMIZE_OUTPUT_JAVA   = NO
+OPTIMIZE_FOR_FORTRAN   = NO
+OPTIMIZE_OUTPUT_VHDL   = NO
+
+#---------------------------------------------------------------------------
+# Configurações de Documentação
+#---------------------------------------------------------------------------
+
+JAVADOC_AUTOBRIEF      = YES
+MULTILINE_CPP_IS_BRIEF = NO
+INHERIT_DOCS           = YES
+SEPARATE_MEMBER_PAGES  = NO
+TAB_SIZE               = 4
+
+# Suporte a Markdown
+MARKDOWN_SUPPORT       = YES
+TOC_INCLUDE_HEADINGS   = 5
+AUTOLINK_SUPPORT       = YES
+BUILTIN_STL_SUPPORT    = NO
+
+# Mostrar documentação de parâmetros
+SHOW_INCLUDE_FILES     = YES
+INLINE_INFO            = YES
+SORT_MEMBER_DOCS       = YES
+SORT_BRIEF_DOCS        = NO
+
+#---------------------------------------------------------------------------
+# Configurações de Alertas
+#---------------------------------------------------------------------------
+
+QUIET                  = NO
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = YES
+WARN_IF_DOC_ERROR      = YES
+WARN_NO_PARAMDOC       = NO
+WARN_FORMAT            = "$file:$line: $text"
+
+#---------------------------------------------------------------------------
+# Configurações de Saída HTML
+#---------------------------------------------------------------------------
+
+GENERATE_HTML          = YES
+HTML_OUTPUT            = html
+HTML_FILE_EXTENSION    = .html
+HTML_COLORSTYLE_HUE    = 40
+HTML_COLORSTYLE_SAT    = 100
+HTML_COLORSTYLE_GAMMA  = 80
+HTML_TIMESTAMP         = YES
+HTML_DYNAMIC_MENUS     = YES
+HTML_DYNAMIC_SECTIONS  = YES
+GENERATE_TREEVIEW      = YES
+TREEVIEW_WIDTH         = 250
+SEARCHENGINE           = YES
+SERVER_BASED_SEARCH    = NO
+
+#---------------------------------------------------------------------------
+# Configurações de Saída LaTeX
+#---------------------------------------------------------------------------
+
+GENERATE_LATEX         = NO
+
+#---------------------------------------------------------------------------
+# Configurações de Gráficos
+#---------------------------------------------------------------------------
+
+HAVE_DOT               = YES
+DOT_NUM_THREADS        = 0
+CLASS_GRAPH            = YES
+COLLABORATION_GRAPH    = YES
+GROUP_GRAPHS           = YES
+UML_LOOK               = YES
+UML_LIMIT_NUM_FIELDS   = 10
+DOT_GRAPH_MAX_NODES    = 50
+MAX_DOT_GRAPH_DEPTH    = 0
+DOT_TRANSPARENT        = NO
+DOT_MULTI_TARGETS      = NO
+GENERATE_LEGEND        = YES
+DOT_CLEANUP            = YES
+
+CALL_GRAPH             = YES
+CALLER_GRAPH           = YES
+GRAPHICAL_HIERARCHY    = YES
+DIRECTORY_GRAPH        = YES
+
+# Formato dos gráficos
+DOT_IMAGE_FORMAT       = svg
+INTERACTIVE_SVG        = YES
+
+#---------------------------------------------------------------------------
+# Configurações Adicionais
+#---------------------------------------------------------------------------
+
+ALPHABETICAL_INDEX     = YES
+GENERATE_TODOLIST      = YES
+GENERATE_TESTLIST      = YES
+GENERATE_BUGLIST       = YES
+GENERATE_DEPRECATEDLIST= YES
+
+# Incluir arquivos fonte
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = NO
+STRIP_CODE_COMMENTS    = YES
+REFERENCED_BY_RELATION = YES
+REFERENCES_RELATION    = YES
+REFERENCES_LINK_SOURCE = YES
+SOURCE_TOOLTIPS        = YES
+VERBATIM_HEADERS       = YES
+
+# Aliases customizados
+ALIASES                = "br=<br>"
+ALIASES               += "note=\par Nota:\n"
+ALIASES               += "warning=\par Atenção:\n"
+ALIASES               += "todo=\par TODO:\n"
+ALIASES               += "mqtt=\par Tópico MQTT:\n"
+ALIASES               += "async=\par Assíncrono:\n"
