@@ -1,6 +1,6 @@
 [submodule "dashboard"]
 	path = dashboard
-	url = git@github.com:RapportTecnologia/Rack_inteligente_Dashboard.git
+	url = git@github.com:ArvoreDosSaberes/Embarcatech-Etapa-2---Projeto-Final-dashboard.git
 [submodule "firmware"]
 	path = firmware
 	url = git@github.com:ArvoreDosSaberes/Embarcatech-Etapa-2---Projeto-Final-firmware.git
