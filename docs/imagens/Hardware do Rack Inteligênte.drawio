@@ -1,0 +1,252 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36" version="29.0.2">
+  <diagram name="Página-1" id="J0AAFsOn4fGl2Lj-IhIk">
+    <mxGraphModel dx="3206" dy="1903" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-1" value="Acelerometro" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f0a30a;fontColor=#000000;strokeColor=#BD7000;" vertex="1" parent="1">
+          <mxGeometry x="895" y="100" width="90" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-4" value="&lt;font style=&quot;font-size: 18px;&quot;&gt;AHT10&lt;/font&gt;" style="swimlane;whiteSpace=wrap;html=1;startSize=30;fillColor=#60a917;fontColor=#ffffff;strokeColor=#2D7600;" vertex="1" parent="1">
+          <mxGeometry x="840" y="270" width="200" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-2" value="Sensor de Temperatura" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;fillColor=#e3c800;fontColor=#000000;strokeColor=#B09500;" vertex="1" parent="Jcalk6t6_pM8vk5RMbRj-4">
+          <mxGeometry x="40" y="130" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-3" value="Sensor de &lt;br&gt;Humidade" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e3c800;fontColor=#000000;strokeColor=#B09500;" vertex="1" parent="Jcalk6t6_pM8vk5RMbRj-4">
+          <mxGeometry x="40" y="40" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-7" value="&lt;font style=&quot;font-size: 18px;&quot;&gt;MPU5060&lt;/font&gt;" style="swimlane;whiteSpace=wrap;html=1;startSize=35;fillColor=#60a917;fontColor=#ffffff;strokeColor=#2D7600;" vertex="1" parent="1">
+          <mxGeometry x="840" y="45" width="200" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-8" value="&lt;font style=&quot;font-size: 21px;&quot;&gt;BitDogLab&lt;/font&gt;" style="swimlane;whiteSpace=wrap;html=1;startSize=40;fillColor=#e51400;fontColor=#ffffff;strokeColor=#B20000;" vertex="1" parent="1">
+          <mxGeometry x="320" y="40" width="390" height="460" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-9" value="LED&lt;br&gt;RGB" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=light-dark(#E51400,#FF0000);fontColor=#ffffff;strokeColor=#B20000;gradientColor=default;" vertex="1" parent="Jcalk6t6_pM8vk5RMbRj-8">
+          <mxGeometry x="155" y="350" width="80" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-10" value="Display OLED" style="whiteSpace=wrap;html=1;aspect=fixed;fillColor=#e3c800;fontColor=#000000;strokeColor=#B09500;" vertex="1" parent="Jcalk6t6_pM8vk5RMbRj-8">
+          <mxGeometry x="250" y="240" width="110" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-12" value="" style="shape=flexArrow;endArrow=classic;html=1;rounded=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;fillColor=#f8cecc;gradientColor=#ea6b66;strokeColor=#b85450;" edge="1" parent="1" source="Jcalk6t6_pM8vk5RMbRj-11">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="653" y="450" as="sourcePoint" />
+            <mxPoint x="608.0000000000005" y="500" as="targetPoint" />
+            <Array as="points" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-27" value="GPIO" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="Jcalk6t6_pM8vk5RMbRj-12">
+          <mxGeometry x="-0.1455" y="7" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-16" value="" style="shape=flexArrow;endArrow=classic;html=1;rounded=0;startArrow=block;fillColor=#f8cecc;gradientColor=#ea6b66;strokeColor=#b85450;gradientDirection=east;" edge="1" parent="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="840" y="160" as="sourcePoint" />
+            <mxPoint x="710" y="160" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-17" value="I2C" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="Jcalk6t6_pM8vk5RMbRj-16">
+          <mxGeometry x="-0.0154" y="-4" relative="1" as="geometry">
+            <mxPoint x="-6" y="-11" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-18" value="&lt;h1 style=&quot;margin-top: 0px;&quot;&gt;Detector de Arrombamento&lt;/h1&gt;&lt;div&gt;O Acelerometro é usado para dectar movimentos do Rack devido a tentativa de arrombamento&lt;/div&gt;" style="text;html=1;whiteSpace=wrap;overflow=hidden;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="1100" y="40" width="220" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-19" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="Jcalk6t6_pM8vk5RMbRj-18">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="630" y="430" as="sourcePoint" />
+            <mxPoint x="1040" y="120" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-20" value="&lt;h1 style=&quot;margin-top: 0px;&quot;&gt;Sensor de Temperatura e Humidade&lt;/h1&gt;&lt;div&gt;Utilizado para obter dados do ambiente interno do Rack&lt;/div&gt;" style="text;html=1;whiteSpace=wrap;overflow=hidden;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="1110" y="310" width="270" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-21" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="Jcalk6t6_pM8vk5RMbRj-20">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="640" y="700" as="sourcePoint" />
+            <mxPoint x="1040" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-25" value="" style="shape=flexArrow;endArrow=classic;html=1;rounded=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;fillColor=#f8cecc;gradientColor=#ea6b66;strokeColor=#b85450;" edge="1" parent="1" target="Jcalk6t6_pM8vk5RMbRj-23">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="320" y="400" as="sourcePoint" />
+            <mxPoint x="210" y="180" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-26" value="GPIO/Relé" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="Jcalk6t6_pM8vk5RMbRj-25">
+          <mxGeometry x="0.2667" y="-5" relative="1" as="geometry">
+            <mxPoint x="26" y="-15" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-29" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="Jcalk6t6_pM8vk5RMbRj-28" target="Jcalk6t6_pM8vk5RMbRj-10">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="730" y="430" as="sourcePoint" />
+            <mxPoint x="780" y="380" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-33" value="&lt;font style=&quot;font-size: 21px;&quot;&gt;Hardware do Rack Inteligente&lt;/font&gt;" style="swimlane;whiteSpace=wrap;html=1;startSize=50;" vertex="1" parent="1">
+          <mxGeometry x="-40" y="-90" width="1440" height="1020" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-36" value="&lt;font style=&quot;font-size: 18px;&quot;&gt;Servo Motor Porta&lt;/font&gt;" style="swimlane;whiteSpace=wrap;html=1;fillColor=#0050ef;fontColor=#ffffff;strokeColor=#001DBC;" vertex="1" parent="Jcalk6t6_pM8vk5RMbRj-33">
+          <mxGeometry x="310" y="640" width="200" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-37" value="" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;fillColor=#e3c800;fontColor=#000000;strokeColor=#B09500;" vertex="1" parent="Jcalk6t6_pM8vk5RMbRj-36">
+          <mxGeometry x="40" y="90" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-38" value="&lt;h1 style=&quot;margin-top: 0px;&quot;&gt;Teclado&lt;/h1&gt;&lt;div&gt;Teclado com número de 0 a 9 e letras de A a D, para movimentação do MENU e Entradas como senha e IP Estático&lt;/div&gt;" style="text;html=1;whiteSpace=wrap;overflow=hidden;rounded=0;" vertex="1" parent="Jcalk6t6_pM8vk5RMbRj-33">
+          <mxGeometry x="1080" y="746" width="180" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-28" value="&lt;h1 style=&quot;margin-top: 0px;&quot;&gt;Display&lt;/h1&gt;&lt;div&gt;Informações imediatas do Rack Inteligente, como nome e IP&lt;/div&gt;" style="text;html=1;whiteSpace=wrap;overflow=hidden;rounded=0;" vertex="1" parent="Jcalk6t6_pM8vk5RMbRj-33">
+          <mxGeometry x="1050" y="610" width="180" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-39" value="" style="endArrow=classic;html=1;rounded=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" parent="Jcalk6t6_pM8vk5RMbRj-33" source="Jcalk6t6_pM8vk5RMbRj-38" target="Jcalk6t6_pM8vk5RMbRj-11">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="878" y="894" as="sourcePoint" />
+            <mxPoint x="743" y="810" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-56" value="Carlos Delfino Carvalho Pinheiro&lt;div&gt;https://carlosdelfino.eti.br&lt;/div&gt;&lt;div&gt;consultoria@carlosdelfino.eti.br &lt;br&gt;12/2025&lt;/div&gt;" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" vertex="1" parent="Jcalk6t6_pM8vk5RMbRj-33">
+          <mxGeometry x="565" y="940" width="360" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-57" value="" style="group;fillColor=#60a917;fontColor=#ffffff;strokeColor=#2D7600;" vertex="1" connectable="0" parent="Jcalk6t6_pM8vk5RMbRj-33">
+          <mxGeometry x="750" y="632.86" width="200" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-40" value="1" style="whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="Jcalk6t6_pM8vk5RMbRj-57">
+          <mxGeometry x="5" y="31.304347826086957" width="40" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-41" value="2" style="whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="Jcalk6t6_pM8vk5RMbRj-57">
+          <mxGeometry x="55" y="31.304347826086957" width="40" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-42" value="3" style="whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="Jcalk6t6_pM8vk5RMbRj-57">
+          <mxGeometry x="105" y="31.304347826086957" width="40" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-43" value="A" style="whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="Jcalk6t6_pM8vk5RMbRj-57">
+          <mxGeometry x="155" y="31.304347826086957" width="40" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-44" value="4" style="whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="Jcalk6t6_pM8vk5RMbRj-57">
+          <mxGeometry x="5" y="83.47826086956522" width="40" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-45" value="5" style="whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="Jcalk6t6_pM8vk5RMbRj-57">
+          <mxGeometry x="55" y="83.47826086956522" width="40" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-46" value="6" style="whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="Jcalk6t6_pM8vk5RMbRj-57">
+          <mxGeometry x="105" y="83.47826086956522" width="40" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-47" value="B" style="whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="Jcalk6t6_pM8vk5RMbRj-57">
+          <mxGeometry x="155" y="83.47826086956522" width="40" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-48" value="7" style="whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="Jcalk6t6_pM8vk5RMbRj-57">
+          <mxGeometry x="5" y="135.65217391304347" width="40" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-49" value="8" style="whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="Jcalk6t6_pM8vk5RMbRj-57">
+          <mxGeometry x="55" y="135.65217391304347" width="40" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-50" value="9" style="whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="Jcalk6t6_pM8vk5RMbRj-57">
+          <mxGeometry x="105" y="135.65217391304347" width="40" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-51" value="C" style="whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="Jcalk6t6_pM8vk5RMbRj-57">
+          <mxGeometry x="155" y="135.65217391304347" width="40" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-52" value="*" style="whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="Jcalk6t6_pM8vk5RMbRj-57">
+          <mxGeometry x="5" y="187.82608695652172" width="40" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-53" value="0" style="whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="Jcalk6t6_pM8vk5RMbRj-57">
+          <mxGeometry x="55" y="187.82608695652172" width="40" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-54" value="#" style="whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="Jcalk6t6_pM8vk5RMbRj-57">
+          <mxGeometry x="105" y="187.82608695652172" width="40" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-55" value="D" style="whiteSpace=wrap;html=1;aspect=fixed;" vertex="1" parent="Jcalk6t6_pM8vk5RMbRj-57">
+          <mxGeometry x="155" y="187.82608695652172" width="40" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-11" value="&lt;font style=&quot;font-size: 18px;&quot;&gt;Keyboard&lt;/font&gt;" style="swimlane;whiteSpace=wrap;html=1;" vertex="1" parent="Jcalk6t6_pM8vk5RMbRj-57">
+          <mxGeometry width="200" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-62" value="&lt;h1 style=&quot;margin-top: 0px;&quot;&gt;Servo Motor da porta&lt;/h1&gt;&lt;div&gt;O servo motor abre e fecha a porta automaticamente, seja pela digitação da senha ou por um caso de anomalia térmica&lt;/div&gt;" style="text;html=1;whiteSpace=wrap;overflow=hidden;rounded=0;" vertex="1" parent="Jcalk6t6_pM8vk5RMbRj-33">
+          <mxGeometry x="350" y="866" width="260" height="144" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-63" value="" style="endArrow=classic;html=1;rounded=0;entryX=0.25;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="Jcalk6t6_pM8vk5RMbRj-33" source="Jcalk6t6_pM8vk5RMbRj-62" target="Jcalk6t6_pM8vk5RMbRj-36">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="170" y="684" as="sourcePoint" />
+            <mxPoint x="160" y="860" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-14" value="" style="shape=flexArrow;endArrow=classic;html=1;rounded=0;startArrow=classic;startFill=1;fillColor=#f8cecc;gradientColor=#ea6b66;strokeColor=#b85450;gradientDirection=east;" edge="1" parent="Jcalk6t6_pM8vk5RMbRj-33">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="880" y="470" as="sourcePoint" />
+            <mxPoint x="750" y="470" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-15" value="I2C" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="Jcalk6t6_pM8vk5RMbRj-14">
+          <mxGeometry x="-0.0154" y="-4" relative="1" as="geometry">
+            <mxPoint y="-16" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-66" value="&lt;h1 style=&quot;margin-top: 0px;&quot;&gt;LED RGB&lt;/h1&gt;&lt;div&gt;Informações de firmware está em execução, porta aberta ou fechada e alarme&lt;/div&gt;" style="text;html=1;whiteSpace=wrap;overflow=hidden;rounded=0;" vertex="1" parent="Jcalk6t6_pM8vk5RMbRj-33">
+          <mxGeometry x="540" y="700" width="180" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-69" value="Buzzer" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#6a00ff;fontColor=#ffffff;strokeColor=#3700CC;" vertex="1" parent="Jcalk6t6_pM8vk5RMbRj-33">
+          <mxGeometry x="640" y="180" width="80" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-68" value="Buzzer" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#6a00ff;fontColor=#ffffff;strokeColor=#3700CC;" vertex="1" parent="Jcalk6t6_pM8vk5RMbRj-33">
+          <mxGeometry x="400" y="180" width="80" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-70" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="Jcalk6t6_pM8vk5RMbRj-33" source="Jcalk6t6_pM8vk5RMbRj-71" target="Jcalk6t6_pM8vk5RMbRj-68">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="1125" y="290" as="sourcePoint" />
+            <mxPoint x="535" y="260" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-71" value="&lt;h1 style=&quot;margin-top: 0px;&quot;&gt;Buzzer&lt;/h1&gt;&lt;div&gt;Gera Alarme sonoro referente anomalia na temperatura, excesso de temperatura, porta aberta&lt;/div&gt;" style="text;html=1;whiteSpace=wrap;overflow=hidden;rounded=0;" vertex="1" parent="Jcalk6t6_pM8vk5RMbRj-33">
+          <mxGeometry x="80" y="80" width="180" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-23" value="&lt;font style=&quot;font-size: 18px;&quot;&gt;Ventilação&lt;/font&gt;" style="swimlane;whiteSpace=wrap;html=1;fillColor=#0050ef;fontColor=#ffffff;strokeColor=#001DBC;" vertex="1" parent="Jcalk6t6_pM8vk5RMbRj-33">
+          <mxGeometry x="50" y="460" width="200" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-24" value="Ventilador" style="shape=tape;whiteSpace=wrap;html=1;fillColor=#6d8764;fontColor=#ffffff;strokeColor=#3A5431;" vertex="1" parent="Jcalk6t6_pM8vk5RMbRj-23">
+          <mxGeometry x="40" y="55" width="120" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-31" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="Jcalk6t6_pM8vk5RMbRj-33" source="Jcalk6t6_pM8vk5RMbRj-30">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="760" y="480" as="sourcePoint" />
+            <mxPoint x="170" y="650" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-30" value="&lt;h1 style=&quot;margin-top: 0px;&quot;&gt;Ventilação&lt;/h1&gt;&lt;div&gt;Ventilador acionado pela GPIO com um Relé para acionamento de carga.&lt;/div&gt;" style="text;html=1;whiteSpace=wrap;overflow=hidden;rounded=0;" vertex="1" parent="Jcalk6t6_pM8vk5RMbRj-33">
+          <mxGeometry x="40" y="690" width="180" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-72" value="Botão A" style="ellipse;whiteSpace=wrap;html=1;aspect=fixed;fillColor=#ffcd28;strokeColor=#d79b00;gradientColor=#ffa500;" vertex="1" parent="Jcalk6t6_pM8vk5RMbRj-33">
+          <mxGeometry x="400" y="310" width="80" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-73" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="Jcalk6t6_pM8vk5RMbRj-33" source="Jcalk6t6_pM8vk5RMbRj-74" target="Jcalk6t6_pM8vk5RMbRj-72">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="1105" y="470" as="sourcePoint" />
+            <mxPoint x="382" y="389" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-74" value="&lt;h1 style=&quot;margin-top: 0px;&quot;&gt;Sensor de porta Aberta&lt;/h1&gt;&lt;div&gt;O botão A simula um sensor de porta aberta. Ao ser apertado indica que a porta está aberta&lt;/div&gt;" style="text;html=1;whiteSpace=wrap;overflow=hidden;rounded=0;" vertex="1" parent="Jcalk6t6_pM8vk5RMbRj-33">
+          <mxGeometry x="60" y="260" width="180" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-64" value="" style="shape=flexArrow;endArrow=classic;html=1;rounded=0;entryX=0.853;entryY=0.002;entryDx=0;entryDy=0;entryPerimeter=0;fillColor=#f8cecc;gradientColor=#ea6b66;strokeColor=#b85450;" edge="1" parent="1" target="Jcalk6t6_pM8vk5RMbRj-36">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="320" y="430" as="sourcePoint" />
+            <mxPoint x="50" y="620" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-65" value="GPIO - PWM" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="Jcalk6t6_pM8vk5RMbRj-64">
+          <mxGeometry x="-0.2895" y="-3" relative="1" as="geometry">
+            <mxPoint x="-40" y="-9" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Jcalk6t6_pM8vk5RMbRj-67" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="Jcalk6t6_pM8vk5RMbRj-66" target="Jcalk6t6_pM8vk5RMbRj-9">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="330" y="804" as="sourcePoint" />
+            <mxPoint x="200" y="725" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
