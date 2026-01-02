@@ -13,6 +13,3 @@
 [submodule "kicad-rp-pico"]
 	path = docs/esquemático/KiCad-RP-Pico
 	url = https://github.com/ncarandini/KiCad-RP-Pico.git
-[submodule "docs/esquemático/BitDogLab"]
-	path = docs/esquemático/BitDogLab
-	url = https://github.com/BitDogLab/BitDogLab.git
