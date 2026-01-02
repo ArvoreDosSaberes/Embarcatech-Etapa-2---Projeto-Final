@@ -116,7 +116,7 @@ A solução adota a arquitetura **AIoT em quatro camadas** (dispositivo IoT, bro
 * **IA Generativa**:
 * IA Generativa para aprendizado de máquina e predição de comportamento do rack.
 
-![Diagrama de Blocos de Hardware](./rack_inteligente.png)
+![Diagrama de Blocos de Hardware](./imagens/rack_inteligente.png)
 
 ### Protocolos de Comunicação
 
