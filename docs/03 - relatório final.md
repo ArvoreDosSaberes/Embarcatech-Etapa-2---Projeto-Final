@@ -253,9 +253,13 @@ O uso de séries temporais para previsão tende a ser mais efetivo após um per�
 
 Link para o projeto no GitHub (workspace com submódulos):
 
-[https://github.com/ArvoreDosSaberes/Embarcatech-Etapa-2---Projeto-Final](https://github.com/ArvoreDosSaberes/Embarcatech-Etapa-2---Projeto-Final "Link direto para o repositório")
+* [https://github.com/ArvoreDosSaberes/Embarcatech-Etapa-2---Projeto-Final](https://github.com/ArvoreDosSaberes/Embarcatech-Etapa-2---Projeto-Final "Link direto para o repositório")
+* [https://github.com/ArvoreDosSaberes/Embarcatech-Etapa-2---Projeto-Final-dashboard](https://github.com/ArvoreDosSaberes/Embarcatech-Etapa-2---Projeto-Final-dashboard)
+* [https://github.com/ArvoreDosSaberes/Embarcatech-Etapa-2---Projeto-Final-firmware](https://github.com/ArvoreDosSaberes/Embarcatech-Etapa-2---Projeto-Final-firmware)
 
 Para clonar o repositório:
+
+O repositório principal tem os demais repositórios como submódulo, portanto use o comando:
 
 ```
 git clone --recurse-submodules https://github.com/ArvoreDosSaberes/Embarcatech-Etapa-2---Projeto-Final.git
