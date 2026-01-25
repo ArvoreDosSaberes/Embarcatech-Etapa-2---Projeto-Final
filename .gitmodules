@@ -13,3 +13,6 @@
 [submodule "kicad-rp-pico"]
 	path = docs/esquemático/KiCad-RP-Pico
 	url = https://github.com/ncarandini/KiCad-RP-Pico.git
+[submodule "site"]
+	path = site
+	url = git@github.com:RapportTecnologia/rack_inteligente_site.git

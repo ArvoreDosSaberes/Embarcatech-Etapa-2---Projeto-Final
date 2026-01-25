@@ -1,0 +1,109 @@
+Formato das Saídas de Métricas para Porta Serial
+===============================================
+
+Este documento descreve o formato de todas as saídas de métricas enviadas para a porta serial no firmware do Rack Inteligente.
+As métricas são geradas pela tarefa de monitoramento RTOS (rtos_monitor.c) e outras tarefas relacionadas.
+
+1. Status do Heap
+-----------------
+Formato: [Monitor] Heap livre: %u bytes, Minimo: %u bytes
+Descrição: Exibe o tamanho atual do heap livre e o mínimo registrado desde o boot.
+Exemplo: [Monitor] Heap livre: 1024 bytes, Minimo: 512 bytes
+
+2. MonitorKV - Heap Global
+--------------------------
+Formato: [MonitorKV] heap_free=%u heap_min=%u task_count=%u uptime_sec=%u
+Descrição: Métricas globais em formato chave-valor.
+- heap_free: bytes livres no heap
+- heap_min: mínimo de bytes livres registrados
+- task_count: número total de tarefas ativas
+- uptime_sec: tempo de funcionamento do sistema em segundos
+Exemplo: [MonitorKV] heap_free=1024 heap_min=512 task_count=15 uptime_sec=3600
+
+3. Hardware KV (HwKV)
+---------------------
+Formato: [HwKV] clk_ref_hz=%u clk_sys_hz=%u clk_peri_hz=%u clk_usb_hz=%u clk_adc_hz=%u clk_rtc_hz=%u scb_icsr=0x%08X rtos_tick_hz=%u rtos_preempt=%u rtos_tickless=%u rtos_max_prio=%u
+Descrição: Informações de hardware e configuração RTOS.
+- clk_ref_hz: frequência do clock de referência
+- clk_sys_hz: frequência do clock do sistema
+- clk_peri_hz: frequência do clock periférico
+- clk_usb_hz: frequência do clock USB
+- clk_adc_hz: frequência do clock ADC
+- clk_rtc_hz: frequência do clock RTC
+- scb_icsr: registrador SCB ICSR (Interrupt Control and State Register)
+- rtos_tick_hz: frequência de ticks do RTOS
+- rtos_preempt: flag de preempção (1=habilitado)
+- rtos_tickless: flag de tickless idle (1=habilitado)
+- rtos_max_prio: prioridade máxima do RTOS
+Exemplo: [HwKV] clk_ref_hz=12000000 clk_sys_hz=133000000 ... rtos_tick_hz=1000 rtos_preempt=1 rtos_tickless=0 rtos_max_prio=5
+
+4. Estatísticas de Tempo de Execução (Run Time Stats)
+---------------------------------------------------
+Cabeçalho: ==================== Run Time Stats (CPU) ====================
+Formato por linha: %s\t\t%u\t\t%u%%
+Descrição: Estatísticas de uso de CPU por tarefa.
+- Nome da tarefa (string)
+- Tempo absoluto de execução (ticks)
+- Porcentagem de uso de CPU
+Exemplo:
+TarefaIdle        150000    15%
+TarefaPrincipal   250000    25%
+
+Rodapé: ==================== End Run Time Stats ====================
+
+5. Linhas de Trace RTOS
+-----------------------
+Formato: %s
+Descrição: Linhas de log de trace do sistema RTOS, geradas por rtosTracePopLogLine.
+Exemplo: [TRACE] Task switched: Idle -> MainTask
+
+6. Linhas WCET Probe
+--------------------
+Formato: %s
+Descrição: Linhas de medição de Worst-Case Execution Time, geradas por wcetProbePopLogLine.
+Exemplo: [WCET] Task: MainTask, WCET: 1500 us
+
+7. Relatório de Watermark de Pilha (Stack Watermark Report)
+---------------------------------------------------------
+Cabeçalho: ==================== Stack Watermark Report ====================
+Cabeçalho da tabela: %-16s | %8s | %8s | %8s | %5s | %s
+Descrição: Tabela com informações de uso de pilha por tarefa.
+Colunas:
+- Tarefa: nome da tarefa (até 16 caracteres)
+- Total: tamanho total da pilha em bytes
+- Livre: watermark mínimo livre em bytes
+- Usado: bytes usados (total - livre)
+- Uso%: porcentagem de uso
+- Status: OK/ATENCAO/CRITICO baseado na porcentagem
+
+Formato por linha: %-16s | %8u | %8u | %8u | %4u%% | %s
+Exemplo:
+TarefaIdle       |    1024 |     512 |     512 |  50% | OK
+TarefaPrincipal  |    2048 |     256 |    1792 |  88% | ATENCAO
+
+MonitorKV por tarefa: [MonitorKV] task=%s stack_total=%u stack_free=%u stack_used=%u stack_usage_pct=%u task_state=%u task_priority=%u task_runtime=%u task_cpu_pct=%u
+Descrição:
+- task: nome da tarefa
+- stack_total: tamanho total da pilha em bytes
+- stack_free: bytes livres (watermark)
+- stack_used: bytes usados
+- stack_usage_pct: porcentagem de uso de pilha
+- task_state: estado da tarefa (0=Running, 1=Ready, 2=Blocked, 3=Suspended, 4=Deleted)
+- task_priority: prioridade da tarefa
+- task_runtime: contador de tempo de execução (ticks)
+- task_cpu_pct: porcentagem de uso de CPU pela tarefa
+Exemplo: [MonitorKV] task=TarefaPrincipal stack_total=2048 stack_free=256 stack_used=1792 stack_usage_pct=88 task_state=1 task_priority=3 task_runtime=250000 task_cpu_pct=25
+
+Linha total: %-16s | %8u | %8u | %8u | %4u%%
+Exemplo: TOTAL            |    3072 |    1024 |    2048 |  67%
+
+Resumo: Tarefas: %u | Stack total: %u bytes | Uso global: %u%%
+Exemplo: Tarefas: 2 | Stack total: 3072 bytes | Uso global: 67%%
+
+Rodapé: ==================== Fim do Report ====================
+
+Notas Gerais:
+- Todas as métricas são enviadas periodicamente pela tarefa vRTOSMonitorTask.
+- Os valores são em formato decimal, exceto onde indicado (ex: 0x para hex).
+- As métricas são condicionais a flags de compilação (ENABLE_RTOS_ANALYSIS, ENABLE_STACK_WATERMARK).
+- Os logs são enviados via LOG_INFO para a porta serial.
